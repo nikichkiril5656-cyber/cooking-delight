@@ -19,6 +19,8 @@ public final class CookingDelight extends JavaPlugin {
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;
     public NamespacedKey keyBoard;
+    public NamespacedKey keyPotDisplay;
+    public NamespacedKey keyBoardPart;
 
     private CustomItems items;
     private RecipeBook recipes;
@@ -36,6 +38,8 @@ public final class CookingDelight extends JavaPlugin {
         keyItem = new NamespacedKey(this, "item");
         keyDish = new NamespacedKey(this, "dish");
         keyBoard = new NamespacedKey(this, "board_display");
+        keyPotDisplay = new NamespacedKey(this, "pot_display");
+        keyBoardPart = new NamespacedKey(this, "board_part");
 
         items = new CustomItems(this);
         recipes = new RecipeBook(this);
@@ -72,14 +76,21 @@ public final class CookingDelight extends JavaPlugin {
             r.setIngredient('P', new RecipeChoice.MaterialChoice(Tag.PLANKS));
             Bukkit.addRecipe(r);
         }
-        ItemStack knife = items.create("knife");
-        if (knife != null) {
-            ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, "knife"), knife);
-            r.shape("I", "S");
-            r.setIngredient('I', Material.IRON_INGOT);
-            r.setIngredient('S', Material.STICK);
-            Bukkit.addRecipe(r);
-        }
+        knifeRecipe("flint_knife", Material.FLINT);
+        knifeRecipe("iron_knife", Material.IRON_INGOT);
+        knifeRecipe("golden_knife", Material.GOLD_INGOT);
+        knifeRecipe("diamond_knife", Material.DIAMOND);
+        knifeRecipe("netherite_knife", Material.NETHERITE_INGOT);
+    }
+
+    private void knifeRecipe(String id, Material head) {
+        ItemStack knife = items.create(id);
+        if (knife == null) return;
+        ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, id), knife);
+        r.shape("H", "S");
+        r.setIngredient('H', head);
+        r.setIngredient('S', Material.STICK);
+        Bukkit.addRecipe(r);
     }
 
     @Override
@@ -89,7 +100,7 @@ public final class CookingDelight extends JavaPlugin {
             return true;
         }
         if (args.length == 0) {
-            sender.sendMessage("/cooking give <pot|board|knife> [игрок] | /cooking reload");
+            sender.sendMessage("/cooking give <предмет> [игрок] | /cooking reload");
             return true;
         }
         if (args[0].equalsIgnoreCase("reload")) {
@@ -117,7 +128,10 @@ public final class CookingDelight extends JavaPlugin {
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
         if (args.length == 1) return List.of("give", "reload");
-        if (args.length == 2 && args[0].equalsIgnoreCase("give")) return List.of("pot", "board", "knife");
+        if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
+            var sec = getConfig().getConfigurationSection("items");
+            return sec == null ? List.of() : List.copyOf(sec.getKeys(false));
+        }
         return List.of();
     }
 }

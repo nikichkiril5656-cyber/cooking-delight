@@ -2,8 +2,11 @@ package dev.cooking.delight;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -15,6 +18,7 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -24,6 +28,7 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 
 import java.util.HashMap;
 
@@ -40,8 +45,8 @@ public final class Listeners implements Listener {
     public void onPlace(BlockPlaceEvent e) {
         String id = plugin.items().idOf(e.getItemInHand());
         if (id == null) return;
-        if (id.equals("pot")) plugin.manager().addPot(e.getBlockPlaced());
-        else if (id.equals("board")) plugin.manager().addBoard(e.getBlockPlaced());
+        if (id.equals("pot")) plugin.manager().addPot(e.getBlockPlaced(), snapYaw(e.getPlayer().getLocation().getYaw()));
+        else if (id.equals("board")) plugin.manager().addBoard(e.getBlockPlaced(), snapYaw(e.getPlayer().getLocation().getYaw()));
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -65,10 +70,24 @@ public final class Listeners implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
-        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getHand() != EquipmentSlot.HAND) return;
+        if (e.getHand() != EquipmentSlot.HAND) return;
         Block b = e.getClickedBlock();
         if (b == null) return;
         Player p = e.getPlayer();
+
+        if (e.getAction() == Action.LEFT_CLICK_BLOCK) {
+            // барьер нельзя сломать в выживании, поэтому забираем кастрюлю Shift + ЛКМ
+            if (plugin.manager().pot(b) != null && p.isSneaking()) {
+                e.setCancelled(true);
+                plugin.manager().removePot(b, true);
+                b.setType(Material.AIR);
+                Location at = b.getLocation().add(0.5, 0.5, 0.5);
+                if (p.getGameMode() != GameMode.CREATIVE) b.getWorld().dropItemNaturally(at, plugin.items().create("pot"));
+                b.getWorld().playSound(at, Sound.BLOCK_METAL_BREAK, 1f, 1f);
+            }
+            return;
+        }
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         ItemStack held = p.getInventory().getItemInMainHand();
         boolean holdingSomething = !held.getType().isAir();
         CookingManager m = plugin.manager();
@@ -80,17 +99,44 @@ public final class Listeners implements Listener {
             p.openInventory(pot.getInventory());
             return;
         }
+    }
 
-        if (m.isBoard(b)) {
-            if (p.isSneaking() && holdingSomething) return;
-            e.setCancelled(true);
-            handleBoard(p, b, held);
+    // ---------- доска: клики идут через Interaction-сущность ----------
+
+    private boolean isBoardHitbox(Entity ent) {
+        return ent instanceof Interaction
+                && ent.getPersistentDataContainer().has(plugin.keyBoardPart, PersistentDataType.BYTE);
+    }
+
+    @EventHandler
+    public void onBoardUse(PlayerInteractEntityEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND || !isBoardHitbox(e.getRightClicked())) return;
+        e.setCancelled(true);
+        Player p = e.getPlayer();
+        handleBoard(p, e.getRightClicked().getLocation().getBlock(), p.getInventory().getItemInMainHand());
+    }
+
+    @EventHandler
+    public void onBoardPunch(PrePlayerAttackEntityEvent e) {
+        if (!isBoardHitbox(e.getAttacked())) return;
+        e.setCancelled(true);
+        Block b = e.getAttacked().getLocation().getBlock();
+        if (!plugin.manager().isBoard(b)) return;
+        plugin.manager().removeBoard(b, true);
+        if (e.getPlayer().getGameMode() != GameMode.CREATIVE) {
+            b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.2, 0.5), plugin.items().create("board"));
         }
+        b.getWorld().playSound(b.getLocation().add(0.5, 0.2, 0.5), Sound.BLOCK_WOOD_BREAK, 1f, 1f);
+    }
+
+    private static float snapYaw(float yaw) {
+        return Math.round(yaw / 90f) * 90f;
     }
 
     private void handleBoard(Player p, Block b, ItemStack held) {
         CookingManager m = plugin.manager();
-        boolean isKnife = "knife".equals(plugin.items().idOf(held));
+        String heldId = plugin.items().idOf(held);
+        boolean isKnife = heldId != null && heldId.endsWith("_knife");
         ItemDisplay display = m.findDisplay(b);
         Location at = b.getLocation().add(0.5, 0.2, 0.5);
 

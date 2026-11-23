@@ -1,4 +1,5 @@
-# Кастомные предметы. model = item_model из ресурспака (namespace:path), необязательно.
+# Кастомные предметы. Любой id, заканчивающийся на _knife, работает как нож.
+# Прочность ножа берётся от базового материала. model = item_model из ресурспака (namespace:path), необязательно.
 items:
   pot:
     material: BARREL
@@ -8,10 +9,26 @@ items:
     material: BROWN_CARPET
     name: "<yellow>Разделочная доска"
     model: "cookingdelight:cutting_board"
-  knife:
+  flint_knife:
+    material: STONE_SWORD
+    name: "<gray>Кремнёвый нож"
+    model: "cookingdelight:flint_knife"
+  iron_knife:
     material: IRON_SWORD
-    name: "<white>Кухонный нож"
-    model: "cookingdelight:knife"
+    name: "<white>Железный нож"
+    model: "cookingdelight:iron_knife"
+  golden_knife:
+    material: GOLDEN_SWORD
+    name: "<yellow>Золотой нож"
+    model: "cookingdelight:golden_knife"
+  diamond_knife:
+    material: DIAMOND_SWORD
+    name: "<aqua>Алмазный нож"
+    model: "cookingdelight:diamond_knife"
+  netherite_knife:
+    material: NETHERITE_SWORD
+    name: "<dark_gray>Незеритовый нож"
+    model: "cookingdelight:netherite_knife"
 
 # Что греет кастрюлю, если стоит под ней.
 # Костры и печи должны гореть (lit).

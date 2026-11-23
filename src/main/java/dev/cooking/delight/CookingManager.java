@@ -4,6 +4,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.type.Light;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Interaction;
 import org.bukkit.block.data.Lightable;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -38,12 +41,97 @@ public final class CookingManager {
     public PotState pot(Block b) { return pots.get(key(b)); }
     public boolean isBoard(Block b) { return boards.contains(key(b)); }
 
-    public void addPot(Block b) { pots.put(key(b), new PotState(b.getLocation())); }
-    public void addBoard(Block b) { boards.add(key(b)); }
+    /** Ставит невидимый барьер и модель кастрюли (item_display) вместо бочки. */
+    public void addPot(Block b, float yaw) {
+        pots.put(key(b), new PotState(b.getLocation()));
+        b.setType(Material.BARRIER, false);
+        spawnPotDisplay(b, yaw);
+    }
+
+    public ItemDisplay findPotDisplay(Block b) {
+        Location c = b.getLocation().add(0.5, 0.5, 0.5);
+        for (ItemDisplay d : b.getWorld().getNearbyEntitiesByType(ItemDisplay.class, c, 0.3)) {
+            if (d.getPersistentDataContainer().has(plugin.keyPotDisplay, PersistentDataType.BYTE)) return d;
+        }
+        return null;
+    }
+
+    public void spawnPotDisplay(Block b, float yaw) {
+        ItemStack item = plugin.items().create("pot");
+        if (item == null) return;
+        Location l = b.getLocation().add(0.5, 0.5, 0.5);
+        l.setYaw(yaw);
+        l.setPitch(0);
+        b.getWorld().spawn(l, ItemDisplay.class, d -> {
+            d.setItemStack(item);
+            d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+            // у block/block в режиме fixed масштаб 0.5, компенсируем, чтобы модель была 1:1 с блоком
+            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(),
+                    new Vector3f(2f, 2f, 2f), new AxisAngle4f()));
+            d.getPersistentDataContainer().set(plugin.keyPotDisplay, PersistentDataType.BYTE, (byte) 1);
+        });
+    }
+    /**
+     * Доска: невидимый блок света (уровень 0, без коллизии), модель (item_display)
+     * и Interaction-хитбокс для кликов. Ставится на твёрдый блок.
+     */
+    public void addBoard(Block b, float yaw) {
+        boards.add(key(b));
+        Light data = (Light) Material.LIGHT.createBlockData();
+        data.setLevel(0);
+        b.setBlockData(data, false);
+
+        ItemStack model = plugin.items().create("board");
+        Location c = b.getLocation().add(0.5, 0.5, 0.5);
+        c.setYaw(yaw);
+        c.setPitch(0);
+        if (model != null) {
+            b.getWorld().spawn(c, ItemDisplay.class, d -> {
+                d.setItemStack(model);
+                d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+                d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(),
+                        new Vector3f(2f, 2f, 2f), new AxisAngle4f()));
+                d.getPersistentDataContainer().set(plugin.keyBoardPart, PersistentDataType.BYTE, (byte) 1);
+            });
+        }
+        b.getWorld().spawn(b.getLocation().add(0.5, 0.0, 0.5), Interaction.class, i -> {
+            i.setInteractionWidth(0.9f);
+            i.setInteractionHeight(0.15f);
+            i.getPersistentDataContainer().set(plugin.keyBoardPart, PersistentDataType.BYTE, (byte) 1);
+        });
+    }
+
+    private List<Entity> boardParts(Block b) {
+        List<Entity> out = new ArrayList<>();
+        for (Entity e : b.getWorld().getNearbyEntities(b.getLocation().add(0.5, 0.5, 0.5), 0.5, 0.5, 0.5)) {
+            var pdc = e.getPersistentDataContainer();
+            if (pdc.has(plugin.keyBoardPart, PersistentDataType.BYTE) || pdc.has(plugin.keyBoard, PersistentDataType.BYTE)) out.add(e);
+        }
+        return out;
+    }
+
+    private void cleanupBoard(Block b, boolean dropContents, boolean dropBoardItem) {
+        Location at = b.getLocation().add(0.5, 0.2, 0.5);
+        for (Entity e : boardParts(b)) {
+            if (dropContents && e instanceof ItemDisplay d
+                    && d.getPersistentDataContainer().has(plugin.keyBoard, PersistentDataType.BYTE)) {
+                b.getWorld().dropItemNaturally(at, d.getItemStack());
+            }
+            e.remove();
+        }
+        Material t = b.getType();
+        if (t == Material.LIGHT || t == plugin.items().blockMaterial("board")) b.setType(Material.AIR, false);
+        if (dropBoardItem) {
+            ItemStack item = plugin.items().create("board");
+            if (item != null) b.getWorld().dropItemNaturally(at, item);
+        }
+    }
 
     public void removePot(Block b, boolean dropContents) {
         PotState p = pots.remove(key(b));
         if (p == null) return;
+        ItemDisplay pd = findPotDisplay(b);
+        if (pd != null) pd.remove();
         for (HumanEntity h : new ArrayList<>(p.getInventory().getViewers())) h.closeInventory();
         if (!dropContents) return;
         Location at = b.getLocation().add(0.5, 0.5, 0.5);
@@ -59,10 +147,7 @@ public final class CookingManager {
 
     public void removeBoard(Block b, boolean dropContents) {
         boards.remove(key(b));
-        ItemDisplay d = findDisplay(b);
-        if (d == null) return;
-        if (dropContents) b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.2, 0.5), d.getItemStack());
-        d.remove();
+        cleanupBoard(b, dropContents, false);
     }
 
     // ---------- разделочная доска ----------
@@ -121,11 +206,17 @@ public final class CookingManager {
             World w = p.loc.getWorld();
             if (w == null || !w.isChunkLoaded(p.loc.getBlockX() >> 4, p.loc.getBlockZ() >> 4)) continue;
             Block b = p.loc.getBlock();
-            if (b.getType() != plugin.items().blockMaterial("pot")) { // блок убрали иным способом
+            Material t = b.getType();
+            if (t == Material.BARREL) { // старая кастрюля из прошлой версии: переносим на барьер
+                b.setType(Material.BARRIER, false);
+                t = Material.BARRIER;
+            }
+            if (t != Material.BARRIER) { // блок убрали иным способом
                 it.remove();
                 removePotContents(p, b);
                 continue;
             }
+            if (findPotDisplay(b) == null) spawnPotDisplay(b, 0f); // модель пропала, восстанавливаем
             tickPot(p, b);
         }
 
@@ -134,15 +225,17 @@ public final class CookingManager {
             String k = bi.next();
             Block b = parse(k);
             if (b == null || !b.getWorld().isChunkLoaded(b.getX() >> 4, b.getZ() >> 4)) continue;
-            if (b.getType() != plugin.items().blockMaterial("board")) {
+            // блок пропал или убрали опору: возвращаем доску и положенный на неё предмет
+            if (b.getType() != Material.LIGHT || !b.getRelative(BlockFace.DOWN).getType().isSolid()) {
                 bi.remove();
-                ItemDisplay d = findDisplay(b);
-                if (d != null) { b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.2, 0.5), d.getItemStack()); d.remove(); }
+                cleanupBoard(b, true, true);
             }
         }
     }
 
     private void removePotContents(PotState p, Block b) {
+        ItemDisplay pd = findPotDisplay(b);
+        if (pd != null) pd.remove();
         for (HumanEntity h : new ArrayList<>(p.getInventory().getViewers())) h.closeInventory();
         int[] extra = {PotState.CONT, PotState.OUT};
         List<Integer> slots = new ArrayList<>();
