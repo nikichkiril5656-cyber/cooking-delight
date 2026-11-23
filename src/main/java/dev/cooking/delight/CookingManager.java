@@ -21,6 +21,7 @@ import org.joml.Vector3f;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class CookingManager {
     private final CookingDelight plugin;
@@ -190,14 +191,35 @@ public final class CookingManager {
             if (it != null && !it.getType().isAir()) have.add(it.getType());
         }
         if (have.isEmpty()) return null;
-        Collections.sort(have);
         ItemStack cont = p.getInventory().getItem(PotState.CONT);
         for (PotRecipe r : plugin.recipes().potRecipes()) {
             if (r.container() != null && (cont == null || cont.getType() != r.container())) continue;
-            if (have.equals(r.ingredients())) return r;
+            if (matches(have, r.ingredients())) return r;
         }
         return null;
     }
+
+    /** Каждому предмету подбираем свой слот рецепта (слот может допускать несколько материалов). */
+    private boolean matches(List<Material> have, List<Set<Material>> slots) {
+        if (have.size() != slots.size()) return false;
+        return assign(have, slots, 0, new boolean[slots.size()]);
+    }
+
+    private boolean assign(List<Material> have, List<Set<Material>> slots, int i, boolean[] used) {
+        if (i == have.size()) return true;
+        for (int s = 0; s < slots.size(); s++) {
+            if (!used[s] && slots.get(s).contains(have.get(i))) {
+                used[s] = true;
+                if (assign(have, slots, i + 1, used)) return true;
+                used[s] = false;
+            }
+        }
+        return false;
+    }
+
+    private static final Map<Material, Material> REMAINDERS = Map.of(
+            Material.MILK_BUCKET, Material.BUCKET,
+            Material.HONEY_BOTTLE, Material.GLASS_BOTTLE);
 
     public void tick() {
         Iterator<Map.Entry<String, PotState>> it = pots.entrySet().iterator();
@@ -267,6 +289,10 @@ public final class CookingManager {
         }
         if (blocked) {
             p.setInfo(true, "Заберите готовое блюдо", NamedTextColor.GOLD, 0);
+            if (ThreadLocalRandom.current().nextInt(4) == 0) {
+                b.getWorld().playSound(b.getLocation().add(0.5, 1.0, 0.5), "cookingdelight:block.cooking_pot.boil_soup",
+                        SoundCategory.BLOCKS, 0.6f, 1f);
+            }
             return;
         }
         if (p.active != r) {
@@ -276,7 +302,9 @@ public final class CookingManager {
         p.progress++;
         Location top = b.getLocation().add(0.5, 1.0, 0.5);
         b.getWorld().spawnParticle(Particle.SMOKE, top, 3, 0.2, 0.05, 0.2, 0.01);
-        b.getWorld().playSound(top, Sound.BLOCK_BREWING_STAND_BREW, 0.3f, 1.4f);
+        if (ThreadLocalRandom.current().nextInt(2) == 0) {
+            b.getWorld().playSound(top, "cookingdelight:block.cooking_pot.boil_water", SoundCategory.BLOCKS, 0.7f, 1f);
+        }
         if (p.progress >= r.time()) {
             finish(p, r, top);
         } else {
@@ -285,7 +313,14 @@ public final class CookingManager {
     }
 
     private void finish(PotState p, PotRecipe r, Location top) {
-        for (int s : PotState.ING) shrink(p, s);
+        for (int s : PotState.ING) {
+            ItemStack used = p.getInventory().getItem(s);
+            if (used != null) {
+                Material rest = REMAINDERS.get(used.getType()); // например, пустое ведро из-под молока
+                if (rest != null) top.getWorld().dropItemNaturally(top, new ItemStack(rest));
+            }
+            shrink(p, s);
+        }
         if (r.container() != null) shrink(p, PotState.CONT);
         p.getInventory().setItem(PotState.OUT, r.result().clone());
         p.progress = 0;

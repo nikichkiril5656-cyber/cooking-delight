@@ -12,10 +12,14 @@ import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import org.bukkit.configuration.file.YamlConfiguration;
+
 import java.io.File;
 import java.util.List;
 
 public final class CookingDelight extends JavaPlugin {
+    private static final int RECIPES_VERSION = 2;
+
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;
     public NamespacedKey keyBoard;
@@ -33,7 +37,18 @@ public final class CookingDelight extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        if (!new File(getDataFolder(), "recipes.yml").exists()) saveResource("recipes.yml", false);
+        // дописываем в существующий config.yml новые предметы (например, ножи), не трогая старые значения
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+
+        File recipesFile = new File(getDataFolder(), "recipes.yml");
+        if (recipesFile.exists() && YamlConfiguration.loadConfiguration(recipesFile).getInt("version", 1) < RECIPES_VERSION) {
+            File old = new File(getDataFolder(), "recipes.old.yml");
+            if (old.exists()) old.delete();
+            recipesFile.renameTo(old);
+            getLogger().warning("recipes.yml устарел и заменён новым, старый сохранён как recipes.old.yml");
+        }
+        if (!recipesFile.exists()) saveResource("recipes.yml", false);
 
         keyItem = new NamespacedKey(this, "item");
         keyDish = new NamespacedKey(this, "dish");
@@ -95,12 +110,17 @@ public final class CookingDelight extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("recipe")) {
+            if (sender instanceof Player p) RecipeBookView.open(this, p);
+            else sender.sendMessage("Команда только для игроков.");
+            return true;
+        }
         if (!sender.hasPermission("cookingdelight.admin")) {
-            sender.sendMessage("Нет прав.");
+            sender.sendMessage("/cooking recipe: книга рецептов");
             return true;
         }
         if (args.length == 0) {
-            sender.sendMessage("/cooking give <предмет> [игрок] | /cooking reload");
+            sender.sendMessage("/cooking recipe | /cooking give <предмет> [игрок] | /cooking reload");
             return true;
         }
         if (args[0].equalsIgnoreCase("reload")) {
@@ -127,7 +147,7 @@ public final class CookingDelight extends JavaPlugin {
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-        if (args.length == 1) return List.of("give", "reload");
+        if (args.length == 1) return s.hasPermission("cookingdelight.admin") ? List.of("recipe", "give", "reload") : List.of("recipe");
         if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
             var sec = getConfig().getConfigurationSection("items");
             return sec == null ? List.of() : List.copyOf(sec.getKeys(false));

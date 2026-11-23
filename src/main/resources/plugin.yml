@@ -6,7 +6,7 @@ description: Cooking pot with GUI and cutting board inspired by Farmer's Delight
 commands:
   cooking:
     description: Admin command
-    usage: /cooking <give|reload>
+    usage: /cooking <recipe|give|reload>
 permissions:
   cookingdelight.admin:
     default: op

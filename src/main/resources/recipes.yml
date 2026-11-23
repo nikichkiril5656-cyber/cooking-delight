@@ -1,16 +1,47 @@
+version: 2
+
+# Группы ингредиентов (аналог тегов из мода). В рецептах пишутся как #имя.
+# В ванили нет лука, капусты, макарон и ломтиков тыквы, поэтому сейчас это заменители,
+# которые можно поменять на любые предметы.
+tags:
+  onion: [ALLIUM]
+  leafy_green: [KELP]
+  pasta: [WHEAT]
+  bread: [BREAD]
+  milk: [MILK_BUCKET]
+  eggs: [EGG]
+  raw_pork: [PORKCHOP]
+  raw_chicken: [CHICKEN]
+  pumpkin_slice: [PUMPKIN]
+  vegetable: [CARROT, POTATO, BEETROOT, ALLIUM, PUMPKIN]
+
+# Как показывать большие группы в книге рецептов.
+tag-names:
+  vegetable: "Любой овощ"
+
 # Рецепты кастрюли. Порядок ингредиентов не важен, каждый занимает один слот.
+# Ингредиент: название материала (CARROT) или группа (#onion).
+# result.nutrition / result.saturation: сытость и насыщение блюда (как в команде /give ... food={...}).
 # effects: ТИП:секунды:уровень (уровень 0 = I). Выдаются при съедении.
 pot:
   vegetable_soup:
-    ingredients: [CARROT, POTATO, BEETROOT]
+    ingredients: [CARROT, POTATO, BEETROOT, "#leafy_green"]
     container: BOWL
     time: 10
     result:
       material: BEETROOT_SOUP
       name: "<green>Овощной суп"
       model: "cookingdelight:vegetable_soup"
+      nutrition: 11
+      saturation: 13.2
     effects:
       - "REGENERATION:5:0"
+  beetroot_soup:
+    ingredients: [BEETROOT, BEETROOT, BEETROOT]
+    container: BOWL
+    time: 10
+    result:
+      material: BEETROOT_SOUP
   beef_stew:
     ingredients: [BEEF, CARROT, POTATO]
     container: BOWL
@@ -19,9 +50,53 @@ pot:
       material: RABBIT_STEW
       name: "<gold>Тушёная говядина"
       model: "cookingdelight:beef_stew"
+      nutrition: 14
+      saturation: 16.8
     effects:
       - "ABSORPTION:60:0"
       - "REGENERATION:5:0"
+  onion_soup:
+    ingredients: ["#onion", "#onion", "#bread", "#milk"]
+    container: BOWL
+    time: 12
+    result:
+      material: MUSHROOM_STEW
+      name: "<yellow>Луковый суп"
+      model: "cookingdelight:onion_soup"
+      nutrition: 11
+      saturation: 13.2
+  pumpkin_soup:
+    ingredients: ["#pumpkin_slice", "#leafy_green", "#raw_pork", "#milk"]
+    container: BOWL
+    time: 12
+    result:
+      material: BEETROOT_SOUP
+      name: "<gold>Тыквенный суп"
+      model: "cookingdelight:pumpkin_soup"
+      nutrition: 12
+      saturation: 14.4
+  chicken_soup:
+    ingredients: ["#raw_chicken", CARROT, "#leafy_green", "#vegetable"]
+    container: BOWL
+    time: 15
+    result:
+      material: MUSHROOM_STEW
+      name: "<yellow>Куриный суп"
+      model: "cookingdelight:chicken_soup"
+      nutrition: 12
+      saturation: 14.4
+    effects:
+      - "REGENERATION:10:0"
+  noodle_soup:
+    ingredients: ["#pasta", "#eggs", DRIED_KELP, "#raw_pork"]
+    container: BOWL
+    time: 15
+    result:
+      material: RABBIT_STEW
+      name: "<white>Лапша в бульоне"
+      model: "cookingdelight:noodle_soup"
+      nutrition: 13
+      saturation: 15.6
 
 # Разделочная доска: положи предмет на доску ПКМ, затем бей ножом (ПКМ).
 cutting:
