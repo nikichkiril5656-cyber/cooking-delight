@@ -1,0 +1,27 @@
+# Кастомные предметы. model = item_model из ресурспака (namespace:path), необязательно.
+items:
+  pot:
+    material: BARREL
+    name: "<gold>Кастрюля"
+    model: "cookingdelight:cooking_pot"
+  board:
+    material: BROWN_CARPET
+    name: "<yellow>Разделочная доска"
+    model: "cookingdelight:cutting_board"
+  knife:
+    material: IRON_SWORD
+    name: "<white>Кухонный нож"
+    model: "cookingdelight:knife"
+
+# Что греет кастрюлю, если стоит под ней.
+# Костры и печи должны гореть (lit).
+heat-sources:
+  - CAMPFIRE
+  - SOUL_CAMPFIRE
+  - FURNACE
+  - SMOKER
+  - BLAST_FURNACE
+  - FIRE
+  - SOUL_FIRE
+  - LAVA
+  - MAGMA_BLOCK

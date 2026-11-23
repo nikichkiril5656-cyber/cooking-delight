@@ -1,0 +1,36 @@
+# Рецепты кастрюли. Порядок ингредиентов не важен, каждый занимает один слот.
+# effects: ТИП:секунды:уровень (уровень 0 = I). Выдаются при съедении.
+pot:
+  vegetable_soup:
+    ingredients: [CARROT, POTATO, BEETROOT]
+    container: BOWL
+    time: 10
+    result:
+      material: BEETROOT_SOUP
+      name: "<green>Овощной суп"
+      model: "cookingdelight:vegetable_soup"
+    effects:
+      - "REGENERATION:5:0"
+  beef_stew:
+    ingredients: [BEEF, CARROT, POTATO]
+    container: BOWL
+    time: 15
+    result:
+      material: RABBIT_STEW
+      name: "<gold>Тушёная говядина"
+      model: "cookingdelight:beef_stew"
+    effects:
+      - "ABSORPTION:60:0"
+      - "REGENERATION:5:0"
+
+# Разделочная доска: положи предмет на доску ПКМ, затем бей ножом (ПКМ).
+cutting:
+  PUMPKIN:
+    result: PUMPKIN_SEEDS
+    amount: 4
+  MELON:
+    result: MELON_SLICE
+    amount: 9
+  SUGAR_CANE:
+    result: SUGAR
+    amount: 2
