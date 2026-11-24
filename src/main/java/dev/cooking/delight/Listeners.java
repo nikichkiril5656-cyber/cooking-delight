@@ -56,6 +56,7 @@ public final class Listeners implements Listener {
                 ts.getPersistentDataContainer().set(plugin.keyStove, PersistentDataType.BYTE, (byte) 1);
                 ts.update();
             }
+            plugin.manager().addStove(e.getBlockPlaced());
         }
     }
 
@@ -86,6 +87,7 @@ public final class Listeners implements Listener {
             if (!creative) b.getWorld().dropItemNaturally(at, plugin.items().create("skillet"));
         } else if (m.isStove(b)) {
             e.setDropItems(false); // содержимое печи выпадет само
+            m.removeStove(b);
             if (!creative) b.getWorld().dropItemNaturally(at, plugin.items().create("stove"));
         }
     }

@@ -30,6 +30,7 @@ public final class CookingDelight extends JavaPlugin {
     public NamespacedKey keySkilletDisplay;
     public NamespacedKey keySkilletFood;
     public NamespacedKey keyStove;
+    public NamespacedKey keyStoveDisplay;
 
     private CustomItems items;
     private RecipeBook recipes;
@@ -63,6 +64,7 @@ public final class CookingDelight extends JavaPlugin {
         keySkilletDisplay = new NamespacedKey(this, "skillet_display");
         keySkilletFood = new NamespacedKey(this, "skillet_food");
         keyStove = new NamespacedKey(this, "stove");
+        keyStoveDisplay = new NamespacedKey(this, "stove_display");
 
         items = new CustomItems(this);
         recipes = new RecipeBook(this);

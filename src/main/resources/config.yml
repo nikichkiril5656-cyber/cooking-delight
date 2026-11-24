@@ -19,6 +19,7 @@ items:
   stove:
     material: FURNACE
     name: "<red>Кухонная печь"
+    model: "cookingdelight:stove"
     lore:
       - "Плавит в 1.5 раза быстрее обычной печи."
       - "Кастрюля и сковорода над ней готовят быстрее."

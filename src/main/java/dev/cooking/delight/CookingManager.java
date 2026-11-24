@@ -5,7 +5,9 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.TileState;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Light;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.block.data.Lightable;
@@ -30,6 +32,7 @@ public final class CookingManager {
     private final Map<String, PotState> pots = new HashMap<>();
     private final Set<String> boards = new HashSet<>();
     private final Map<String, SkilletState> skillets = new HashMap<>();
+    private final Set<String> stoves = new HashSet<>();
     private final Set<Material> heat = EnumSet.noneOf(Material.class);
 
     public CookingManager(CookingDelight plugin) {
@@ -186,6 +189,61 @@ public final class CookingManager {
         if (b.getType() != Material.FURNACE) return false;
         return b.getState() instanceof TileState ts
                 && ts.getPersistentDataContainer().has(plugin.keyStove, PersistentDataType.BYTE);
+    }
+
+    /** Модель печи рисуется item_display чуть больше блока и закрывает ванильную печь. */
+    public void addStove(Block b) {
+        stoves.add(key(b));
+        syncStove(b);
+    }
+
+    public void removeStove(Block b) {
+        stoves.remove(key(b));
+        ItemDisplay d = findStoveDisplay(b);
+        if (d != null) d.remove();
+    }
+
+    private ItemDisplay findStoveDisplay(Block b) {
+        Location c = b.getLocation().add(0.5, 0.5, 0.5);
+        for (ItemDisplay d : b.getWorld().getNearbyEntitiesByType(ItemDisplay.class, c, 0.3)) {
+            if (d.getPersistentDataContainer().has(plugin.keyStoveDisplay, PersistentDataType.BYTE)) return d;
+        }
+        return null;
+    }
+
+    private ItemStack stoveItem(boolean lit) {
+        ItemStack it = plugin.items().create("stove");
+        if (it == null) return null;
+        ItemMeta meta = it.getItemMeta();
+        meta.setItemModel(new NamespacedKey("cookingdelight", lit ? "stove_on" : "stove"));
+        it.setItemMeta(meta);
+        return it;
+    }
+
+    /** Создаёт модель печи (если пропала) и переключает её на горящую/негорящую. */
+    private void syncStove(Block b) {
+        boolean lit = b.getBlockData() instanceof Lightable l && l.isLit();
+        ItemDisplay d = findStoveDisplay(b);
+        if (d != null) {
+            NamespacedKey want = new NamespacedKey("cookingdelight", lit ? "stove_on" : "stove");
+            ItemMeta m = d.getItemStack().getItemMeta();
+            if (!want.equals(m.getItemModel())) d.setItemStack(stoveItem(lit));
+            return;
+        }
+        ItemStack item = stoveItem(lit);
+        if (item == null) return;
+        BlockFace facing = b.getBlockData() instanceof Directional dir ? dir.getFacing() : BlockFace.NORTH;
+        Location l = b.getLocation().add(0.5, 0.5, 0.5);
+        l.setDirection(facing.getDirection()); // лицевая сторона модели смотрит туда же, куда печь
+        b.getWorld().spawn(l, ItemDisplay.class, disp -> {
+            disp.setItemStack(item);
+            disp.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+            // 2.004 = блок 1:1 (компенсация fixed 0.5) + 0.002 с каждой стороны, чтобы не мерцало
+            disp.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(),
+                    new Vector3f(2.004f, 2.004f, 2.004f), new AxisAngle4f()));
+            disp.setBrightness(new Display.Brightness(15, 15)); // внутри непрозрачного блока света нет
+            disp.getPersistentDataContainer().set(plugin.keyStoveDisplay, PersistentDataType.BYTE, (byte) 1);
+        });
     }
 
     /** Множитель скорости готовки для кастрюли и сковороды над источником тепла. */
@@ -354,6 +412,19 @@ public final class CookingManager {
             tickPot(p, b);
         }
 
+        Iterator<String> sti = stoves.iterator();
+        while (sti.hasNext()) {
+            Block b = parse(sti.next());
+            if (b == null || !b.getWorld().isChunkLoaded(b.getX() >> 4, b.getZ() >> 4)) continue;
+            if (!isStove(b)) { // печь убрали иным способом
+                ItemDisplay d = findStoveDisplay(b);
+                if (d != null) d.remove();
+                sti.remove();
+                continue;
+            }
+            syncStove(b);
+        }
+
         Iterator<Map.Entry<String, SkilletState>> si = skillets.entrySet().iterator();
         while (si.hasNext()) {
             SkilletState s = si.next().getValue();
@@ -482,6 +553,7 @@ public final class CookingManager {
         pots.clear();
         boards.clear();
         skillets.clear();
+        stoves.clear();
         File f = new File(plugin.getDataFolder(), "data.yml");
         YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
         ConfigurationSection ps = y.getConfigurationSection("pots");
@@ -501,6 +573,7 @@ public final class CookingManager {
             }
         }
         boards.addAll(y.getStringList("boards"));
+        stoves.addAll(y.getStringList("stoves"));
         ConfigurationSection ks = y.getConfigurationSection("skillets");
         if (ks != null) {
             for (String id : ks.getKeys(false)) {
@@ -536,6 +609,7 @@ public final class CookingManager {
             }
         }
         y.set("boards", new ArrayList<>(boards));
+        y.set("stoves", new ArrayList<>(stoves));
         int k = 0;
         for (SkilletState s : skillets.values()) {
             String base = "skillets." + (k++);
