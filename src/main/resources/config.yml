@@ -9,6 +9,19 @@ items:
     material: BROWN_CARPET
     name: "<yellow>Разделочная доска"
     model: "cookingdelight:cutting_board"
+  skillet:
+    material: IRON_TRAPDOOR
+    name: "<gray>Сковорода"
+    model: "cookingdelight:skillet"
+    lore:
+      - "Ставится над огнём."
+      - "ПКМ сырой едой, чтобы пожарить."
+  stove:
+    material: FURNACE
+    name: "<red>Кухонная печь"
+    lore:
+      - "Плавит в 1.5 раза быстрее обычной печи."
+      - "Кастрюля и сковорода над ней готовят быстрее."
   flint_knife:
     material: STONE_SWORD
     name: "<gray>Кремнёвый нож"

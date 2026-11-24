@@ -28,7 +28,7 @@ public final class PotState implements InventoryHolder {
             .color(NamedTextColor.WHITE);
 
     public final Location loc;
-    public int progress;
+    public double progress;
     public PotRecipe active;
     private final Inventory inv;
 

@@ -1,12 +1,16 @@
 package dev.cooking.delight;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CustomItems {
     private final CookingDelight plugin;
@@ -24,6 +28,11 @@ public final class CustomItems {
         ItemStack it = new ItemStack(m);
         ItemMeta meta = it.getItemMeta();
         meta.displayName(MiniMessage.miniMessage().deserialize("<!italic>" + s.getString("name", id)));
+        if (s.contains("lore")) {
+            List<Component> lore = new ArrayList<>();
+            for (String line : s.getStringList("lore")) lore.add(MiniMessage.miniMessage().deserialize("<!italic><gray>" + line));
+            meta.lore(lore);
+        }
         String model = s.getString("model");
         if (model != null) {
             NamespacedKey k = NamespacedKey.fromString(model);

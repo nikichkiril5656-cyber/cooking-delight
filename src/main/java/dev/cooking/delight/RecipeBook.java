@@ -19,12 +19,14 @@ import java.util.*;
 
 public final class RecipeBook {
     public record CutRecipe(Material result, int amount) {}
+    public record SkilletRecipe(Material input, Material result, int time) {}
 
     private final CookingDelight plugin;
     private final List<PotRecipe> potRecipes = new ArrayList<>();
     private final Map<String, PotRecipe> byId = new HashMap<>();
     private final Map<Material, CutRecipe> cuts = new EnumMap<>(Material.class);
     private final Set<Material> containers = EnumSet.noneOf(Material.class);
+    private final Map<Material, SkilletRecipe> skillet = new EnumMap<>(Material.class);
     private final Map<String, Set<Material>> tags = new HashMap<>();
     private final Map<String, String> tagNames = new HashMap<>();
 
@@ -36,6 +38,8 @@ public final class RecipeBook {
     public PotRecipe byId(String id) { return byId.get(id); }
     public CutRecipe cut(Material m) { return cuts.get(m); }
     public Set<Material> containers() { return containers; }
+    public SkilletRecipe skillet(Material m) { return skillet.get(m); }
+    public Map<Material, SkilletRecipe> skilletRecipes() { return skillet; }
 
     private Component tagLabel(String key, Set<Material> items) {
         String custom = tagNames.get(key);
@@ -51,6 +55,7 @@ public final class RecipeBook {
         byId.clear();
         cuts.clear();
         containers.clear();
+        skillet.clear();
         tags.clear();
         tagNames.clear();
         YamlConfiguration y = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "recipes.yml"));
@@ -155,6 +160,19 @@ public final class RecipeBook {
                 cuts.put(im, new CutRecipe(om, Math.max(1, cut.getInt(in + ".amount", 1))));
             }
         }
-        plugin.getLogger().info("Loaded " + potRecipes.size() + " pot recipes, " + cuts.size() + " cutting recipes");
+        ConfigurationSection sk = y.getConfigurationSection("skillet");
+        if (sk != null) {
+            for (String in : sk.getKeys(false)) {
+                Material im = Material.matchMaterial(in);
+                Material om = Material.matchMaterial(sk.getString(in + ".result", ""));
+                if (im == null || om == null) {
+                    plugin.getLogger().warning("Skillet recipe '" + in + "' skipped");
+                    continue;
+                }
+                skillet.put(im, new SkilletRecipe(im, om, Math.max(1, sk.getInt(in + ".time", 10))));
+            }
+        }
+        plugin.getLogger().info("Loaded " + potRecipes.size() + " pot recipes, " + skillet.size() + " skillet recipes, "
+                + cuts.size() + " cutting recipes");
     }
 }

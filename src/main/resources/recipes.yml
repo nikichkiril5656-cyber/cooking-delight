@@ -1,4 +1,4 @@
-version: 2
+version: 3
 
 # Группы ингредиентов (аналог тегов из мода). В рецептах пишутся как #имя.
 # В ванили нет лука, капусты, макарон и ломтиков тыквы, поэтому сейчас это заменители,
@@ -97,6 +97,17 @@ pot:
       model: "cookingdelight:noodle_soup"
       nutrition: 13
       saturation: 15.6
+
+# Сковорода: положи сырую еду ПКМ, она жарится над огнём. time: секунды.
+skillet:
+  BEEF: {result: COOKED_BEEF, time: 8}
+  PORKCHOP: {result: COOKED_PORKCHOP, time: 8}
+  CHICKEN: {result: COOKED_CHICKEN, time: 8}
+  MUTTON: {result: COOKED_MUTTON, time: 8}
+  RABBIT: {result: COOKED_RABBIT, time: 8}
+  COD: {result: COOKED_COD, time: 6}
+  SALMON: {result: COOKED_SALMON, time: 6}
+  POTATO: {result: BAKED_POTATO, time: 10}
 
 # Разделочная доска: положи предмет на доску ПКМ, затем бей ножом (ПКМ).
 cutting:

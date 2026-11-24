@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.TileState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
@@ -16,6 +17,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.FurnaceStartSmeltEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -47,6 +49,21 @@ public final class Listeners implements Listener {
         if (id == null) return;
         if (id.equals("pot")) plugin.manager().addPot(e.getBlockPlaced(), snapYaw(e.getPlayer().getLocation().getYaw()));
         else if (id.equals("board")) plugin.manager().addBoard(e.getBlockPlaced(), snapYaw(e.getPlayer().getLocation().getYaw()));
+        else if (id.equals("skillet")) plugin.manager().addSkillet(e.getBlockPlaced(), snapYaw(e.getPlayer().getLocation().getYaw()));
+        else if (id.equals("stove")) {
+            // кухонная печь = обычная печь с меткой в данных блока
+            if (e.getBlockPlaced().getState() instanceof TileState ts) {
+                ts.getPersistentDataContainer().set(plugin.keyStove, PersistentDataType.BYTE, (byte) 1);
+                ts.update();
+            }
+        }
+    }
+
+    @EventHandler
+    public void onSmeltStart(FurnaceStartSmeltEvent e) {
+        if (plugin.manager().isStove(e.getBlock())) {
+            e.setTotalCookTime((int) (e.getTotalCookTime() / 1.5));
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -63,6 +80,13 @@ public final class Listeners implements Listener {
             e.setDropItems(false);
             m.removeBoard(b, true);
             if (!creative) b.getWorld().dropItemNaturally(at, plugin.items().create("board"));
+        } else if (m.skillet(b) != null) {
+            e.setDropItems(false);
+            m.removeSkillet(b, true);
+            if (!creative) b.getWorld().dropItemNaturally(at, plugin.items().create("skillet"));
+        } else if (m.isStove(b)) {
+            e.setDropItems(false); // содержимое печи выпадет само
+            if (!creative) b.getWorld().dropItemNaturally(at, plugin.items().create("stove"));
         }
     }
 
@@ -77,6 +101,15 @@ public final class Listeners implements Listener {
 
         if (e.getAction() == Action.LEFT_CLICK_BLOCK) {
             // барьер нельзя сломать в выживании, поэтому забираем кастрюлю Shift + ЛКМ
+            if (plugin.manager().skillet(b) != null && p.isSneaking()) {
+                e.setCancelled(true);
+                plugin.manager().removeSkillet(b, true);
+                b.setType(Material.AIR);
+                Location sat = b.getLocation().add(0.5, 0.5, 0.5);
+                if (p.getGameMode() != GameMode.CREATIVE) b.getWorld().dropItemNaturally(sat, plugin.items().create("skillet"));
+                b.getWorld().playSound(sat, Sound.BLOCK_METAL_BREAK, 1f, 1f);
+                return;
+            }
             if (plugin.manager().pot(b) != null && p.isSneaking()) {
                 e.setCancelled(true);
                 plugin.manager().removePot(b, true);
@@ -98,6 +131,36 @@ public final class Listeners implements Listener {
             e.setCancelled(true);
             p.openInventory(pot.getInventory());
             return;
+        }
+
+        SkilletState sk = m.skillet(b);
+        if (sk != null) {
+            if (p.isSneaking() && holdingSomething) return;
+            e.setCancelled(true);
+            handleSkillet(p, b, sk, held);
+        }
+    }
+
+    private void handleSkillet(Player p, Block b, SkilletState sk, ItemStack held) {
+        Location at = b.getLocation().add(0.5, 0.3, 0.5);
+        if (sk.item == null) { // кладём сырую еду
+            RecipeBook.SkilletRecipe r = held.getType().isAir() ? null : plugin.recipes().skillet(held.getType());
+            if (r == null) return;
+            ItemStack one = held.clone();
+            one.setAmount(1);
+            sk.item = one;
+            sk.progress = 0;
+            plugin.manager().showFood(b, one.clone());
+            if (p.getGameMode() != GameMode.CREATIVE) held.setAmount(held.getAmount() - 1);
+            b.getWorld().playSound(at, Sound.BLOCK_METAL_PLACE, 0.8f, 1.2f);
+            return;
+        }
+        if (held.getType().isAir()) { // пустая рука забирает еду
+            HashMap<Integer, ItemStack> left = p.getInventory().addItem(sk.item);
+            for (ItemStack rest : left.values()) b.getWorld().dropItemNaturally(at, rest);
+            sk.item = null;
+            sk.progress = 0;
+            plugin.manager().clearFood(b);
         }
     }
 

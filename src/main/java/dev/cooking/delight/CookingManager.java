@@ -4,6 +4,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.TileState;
 import org.bukkit.block.data.type.Light;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
@@ -13,6 +14,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
@@ -27,6 +29,7 @@ public final class CookingManager {
     private final CookingDelight plugin;
     private final Map<String, PotState> pots = new HashMap<>();
     private final Set<String> boards = new HashSet<>();
+    private final Map<String, SkilletState> skillets = new HashMap<>();
     private final Set<Material> heat = EnumSet.noneOf(Material.class);
 
     public CookingManager(CookingDelight plugin) {
@@ -177,6 +180,115 @@ public final class CookingManager {
 
     // ---------- кастрюля: логика ----------
 
+    // ---------- кухонная печь (обычная печь с меткой) ----------
+
+    public boolean isStove(Block b) {
+        if (b.getType() != Material.FURNACE) return false;
+        return b.getState() instanceof TileState ts
+                && ts.getPersistentDataContainer().has(plugin.keyStove, PersistentDataType.BYTE);
+    }
+
+    /** Множитель скорости готовки для кастрюли и сковороды над источником тепла. */
+    private double speedOver(Block below) {
+        return isStove(below) ? 1.5 : 1.0;
+    }
+
+    // ---------- сковорода ----------
+
+    public SkilletState skillet(Block b) { return skillets.get(key(b)); }
+
+    public void addSkillet(Block b, float yaw) {
+        skillets.put(key(b), new SkilletState(b.getLocation()));
+        b.setType(Material.BARRIER, false);
+        spawnSkilletDisplay(b, yaw);
+    }
+
+    public ItemDisplay findSkilletDisplay(Block b) {
+        Location c = b.getLocation().add(0.5, 0.5, 0.5);
+        for (ItemDisplay d : b.getWorld().getNearbyEntitiesByType(ItemDisplay.class, c, 0.3)) {
+            if (d.getPersistentDataContainer().has(plugin.keySkilletDisplay, PersistentDataType.BYTE)) return d;
+        }
+        return null;
+    }
+
+    public void spawnSkilletDisplay(Block b, float yaw) {
+        ItemStack item = plugin.items().create("skillet");
+        if (item == null) return;
+        ItemMeta meta = item.getItemMeta();
+        meta.setItemModel(new NamespacedKey("cookingdelight", "skillet_placed"));
+        item.setItemMeta(meta);
+        Location l = b.getLocation().add(0.5, 0.5, 0.5);
+        l.setYaw(yaw);
+        l.setPitch(0);
+        b.getWorld().spawn(l, ItemDisplay.class, d -> {
+            d.setItemStack(item);
+            d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(),
+                    new Vector3f(2f, 2f, 2f), new AxisAngle4f()));
+            d.getPersistentDataContainer().set(plugin.keySkilletDisplay, PersistentDataType.BYTE, (byte) 1);
+        });
+    }
+
+    private ItemDisplay findFood(Block b) {
+        Location c = b.getLocation().add(0.5, 0.12, 0.5);
+        for (ItemDisplay d : b.getWorld().getNearbyEntitiesByType(ItemDisplay.class, c, 0.3)) {
+            if (d.getPersistentDataContainer().has(plugin.keySkilletFood, PersistentDataType.BYTE)) return d;
+        }
+        return null;
+    }
+
+    public void clearFood(Block b) {
+        ItemDisplay d = findFood(b);
+        if (d != null) d.remove();
+    }
+
+    /** Показывает еду на сковороде (заменяет предыдущую). */
+    public void showFood(Block b, ItemStack item) {
+        clearFood(b);
+        Location l = b.getLocation().add(0.5, 0.12, 0.5);
+        b.getWorld().spawn(l, ItemDisplay.class, d -> {
+            d.setItemStack(item);
+            d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+            d.setTransformation(new Transformation(new Vector3f(0, 0, 0),
+                    new AxisAngle4f((float) (-Math.PI / 2), 1, 0, 0),
+                    new Vector3f(0.6f, 0.6f, 0.6f), new AxisAngle4f()));
+            d.getPersistentDataContainer().set(plugin.keySkilletFood, PersistentDataType.BYTE, (byte) 1);
+        });
+    }
+
+    public void removeSkillet(Block b, boolean dropContents) {
+        SkilletState s = skillets.remove(key(b));
+        if (s == null) return;
+        cleanupSkillet(b, s, dropContents);
+    }
+
+    private void cleanupSkillet(Block b, SkilletState s, boolean dropContents) {
+        clearFood(b);
+        ItemDisplay d = findSkilletDisplay(b);
+        if (d != null) d.remove();
+        if (dropContents && s.item != null) b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.3, 0.5), s.item);
+    }
+
+    private void tickSkillet(SkilletState s, Block b) {
+        if (s.item == null) return;
+        RecipeBook.SkilletRecipe r = plugin.recipes().skillet(s.item.getType());
+        if (r == null) return; // уже готово
+        Block below = b.getRelative(BlockFace.DOWN);
+        if (!isHeated(below)) return;
+        s.progress += speedOver(below);
+        Location top = b.getLocation().add(0.5, 0.3, 0.5);
+        b.getWorld().spawnParticle(Particle.SMOKE, top, 2, 0.15, 0.02, 0.15, 0.005);
+        if (ThreadLocalRandom.current().nextInt(3) == 0) {
+            b.getWorld().playSound(top, Sound.BLOCK_CAMPFIRE_CRACKLE, SoundCategory.BLOCKS, 0.5f, 1f);
+        }
+        if (s.progress >= r.time()) {
+            s.item = new ItemStack(r.result(), 1);
+            s.progress = 0;
+            showFood(b, s.item.clone());
+            b.getWorld().playSound(top, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.2f);
+        }
+    }
+
     private boolean isHeated(Block below) {
         Material m = below.getType();
         if (!heat.contains(m)) return false;
@@ -242,6 +354,22 @@ public final class CookingManager {
             tickPot(p, b);
         }
 
+        Iterator<Map.Entry<String, SkilletState>> si = skillets.entrySet().iterator();
+        while (si.hasNext()) {
+            SkilletState s = si.next().getValue();
+            World w = s.loc.getWorld();
+            if (w == null || !w.isChunkLoaded(s.loc.getBlockX() >> 4, s.loc.getBlockZ() >> 4)) continue;
+            Block b = s.loc.getBlock();
+            if (b.getType() != Material.BARRIER) { // блок убрали иным способом
+                si.remove();
+                cleanupSkillet(b, s, true);
+                continue;
+            }
+            if (findSkilletDisplay(b) == null) spawnSkilletDisplay(b, 0f);
+            if (s.item != null && findFood(b) == null) showFood(b, s.item.clone());
+            tickSkillet(s, b);
+        }
+
         Iterator<String> bi = boards.iterator();
         while (bi.hasNext()) {
             String k = bi.next();
@@ -299,7 +427,7 @@ public final class CookingManager {
             p.active = r;
             p.progress = 0;
         }
-        p.progress++;
+        p.progress += speedOver(b.getRelative(BlockFace.DOWN));
         Location top = b.getLocation().add(0.5, 1.0, 0.5);
         b.getWorld().spawnParticle(Particle.SMOKE, top, 3, 0.2, 0.05, 0.2, 0.01);
         if (ThreadLocalRandom.current().nextInt(2) == 0) {
@@ -308,7 +436,7 @@ public final class CookingManager {
         if (p.progress >= r.time()) {
             finish(p, r, top);
         } else {
-            p.setInfo(true, "Готовка: " + p.progress + "/" + r.time() + " с", NamedTextColor.GREEN, 100 * p.progress / r.time());
+            p.setInfo(true, "Готовка: " + (int) p.progress + "/" + r.time() + " с", NamedTextColor.GREEN, (int) (100 * p.progress / r.time()));
         }
     }
 
@@ -353,6 +481,7 @@ public final class CookingManager {
         }
         pots.clear();
         boards.clear();
+        skillets.clear();
         File f = new File(plugin.getDataFolder(), "data.yml");
         YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
         ConfigurationSection ps = y.getConfigurationSection("pots");
@@ -372,6 +501,20 @@ public final class CookingManager {
             }
         }
         boards.addAll(y.getStringList("boards"));
+        ConfigurationSection ks = y.getConfigurationSection("skillets");
+        if (ks != null) {
+            for (String id : ks.getKeys(false)) {
+                ConfigurationSection s = ks.getConfigurationSection(id);
+                if (s == null) continue;
+                World w = Bukkit.getWorld(s.getString("world", ""));
+                if (w == null) continue;
+                Location l = new Location(w, s.getInt("x"), s.getInt("y"), s.getInt("z"));
+                SkilletState st = new SkilletState(l);
+                st.item = s.getItemStack("item");
+                st.progress = s.getDouble("progress");
+                skillets.put(key(l.getBlock()), st);
+            }
+        }
     }
 
     public void save() {
@@ -393,6 +536,16 @@ public final class CookingManager {
             }
         }
         y.set("boards", new ArrayList<>(boards));
+        int k = 0;
+        for (SkilletState s : skillets.values()) {
+            String base = "skillets." + (k++);
+            y.set(base + ".world", s.loc.getWorld().getName());
+            y.set(base + ".x", s.loc.getBlockX());
+            y.set(base + ".y", s.loc.getBlockY());
+            y.set(base + ".z", s.loc.getBlockZ());
+            if (s.item != null) y.set(base + ".item", s.item);
+            y.set(base + ".progress", s.progress);
+        }
         try {
             y.save(new File(plugin.getDataFolder(), "data.yml"));
         } catch (IOException e) {

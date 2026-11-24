@@ -15,16 +15,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class CookingDelight extends JavaPlugin {
-    private static final int RECIPES_VERSION = 2;
+    private static final int RECIPES_VERSION = 3;
 
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;
     public NamespacedKey keyBoard;
     public NamespacedKey keyPotDisplay;
     public NamespacedKey keyBoardPart;
+    public NamespacedKey keySkilletDisplay;
+    public NamespacedKey keySkilletFood;
+    public NamespacedKey keyStove;
 
     private CustomItems items;
     private RecipeBook recipes;
@@ -55,6 +60,9 @@ public final class CookingDelight extends JavaPlugin {
         keyBoard = new NamespacedKey(this, "board_display");
         keyPotDisplay = new NamespacedKey(this, "pot_display");
         keyBoardPart = new NamespacedKey(this, "board_part");
+        keySkilletDisplay = new NamespacedKey(this, "skillet_display");
+        keySkilletFood = new NamespacedKey(this, "skillet_food");
+        keyStove = new NamespacedKey(this, "stove");
 
         items = new CustomItems(this);
         recipes = new RecipeBook(this);
@@ -63,10 +71,12 @@ public final class CookingDelight extends JavaPlugin {
         manager.load();
 
         getServer().getPluginManager().registerEvents(new Listeners(this), this);
+        getServer().getPluginManager().registerEvents(new RecipeGuiListener(this), this);
         registerCrafting();
 
         getServer().getScheduler().runTaskTimer(this, manager::tick, 20L, 20L);
         getServer().getScheduler().runTaskTimer(this, manager::save, 6000L, 6000L);
+        getServer().getScheduler().runTaskTimer(this, () -> RecipeGui.animate(), 20L, 20L);
     }
 
     @Override
@@ -74,23 +84,36 @@ public final class CookingDelight extends JavaPlugin {
         if (manager != null) manager.save();
     }
 
+    private final List<CraftDef> crafts = new ArrayList<>();
+
+    public List<CraftDef> crafts() { return crafts; }
+
+    private static RecipeChoice.MaterialChoice mc(Material... m) {
+        return new RecipeChoice.MaterialChoice(m);
+    }
+
+    private void craft(String id, String[] shape, Map<Character, RecipeChoice.MaterialChoice> ingredients) {
+        ItemStack result = items.create(id);
+        if (result == null) return;
+        ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, id), result);
+        r.shape(shape);
+        for (Map.Entry<Character, RecipeChoice.MaterialChoice> e : ingredients.entrySet()) {
+            r.setIngredient(e.getKey(), e.getValue());
+        }
+        Bukkit.addRecipe(r);
+        crafts.add(new CraftDef(id, shape, ingredients));
+    }
+
     private void registerCrafting() {
-        ItemStack pot = items.create("pot");
-        if (pot != null) {
-            ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, "pot"), pot);
-            r.shape("I I", "IBI", "III");
-            r.setIngredient('I', Material.IRON_INGOT);
-            r.setIngredient('B', Material.BOWL);
-            Bukkit.addRecipe(r);
-        }
-        ItemStack board = items.create("board");
-        if (board != null) {
-            ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, "board"), board);
-            r.shape(" S ", "PPP");
-            r.setIngredient('S', Material.STICK);
-            r.setIngredient('P', new RecipeChoice.MaterialChoice(Tag.PLANKS));
-            Bukkit.addRecipe(r);
-        }
+        crafts.clear();
+        craft("pot", new String[]{"I I", "IBI", "III"},
+                Map.of('I', mc(Material.IRON_INGOT), 'B', mc(Material.BOWL)));
+        craft("skillet", new String[]{"II ", "II ", "  S"},
+                Map.of('I', mc(Material.IRON_INGOT), 'S', mc(Material.STICK)));
+        craft("stove", new String[]{"III", "BCB", "BBB"},
+                Map.of('I', mc(Material.IRON_INGOT), 'B', mc(Material.BRICK), 'C', mc(Material.CAMPFIRE)));
+        craft("board", new String[]{" S ", "PPP"},
+                Map.of('S', mc(Material.STICK), 'P', new RecipeChoice.MaterialChoice(Tag.PLANKS)));
         knifeRecipe("flint_knife", Material.FLINT);
         knifeRecipe("iron_knife", Material.IRON_INGOT);
         knifeRecipe("golden_knife", Material.GOLD_INGOT);
@@ -99,19 +122,13 @@ public final class CookingDelight extends JavaPlugin {
     }
 
     private void knifeRecipe(String id, Material head) {
-        ItemStack knife = items.create(id);
-        if (knife == null) return;
-        ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, id), knife);
-        r.shape("H", "S");
-        r.setIngredient('H', head);
-        r.setIngredient('S', Material.STICK);
-        Bukkit.addRecipe(r);
+        craft(id, new String[]{"H", "S"}, Map.of('H', mc(head), 'S', mc(Material.STICK)));
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (args.length > 0 && args[0].equalsIgnoreCase("recipe")) {
-            if (sender instanceof Player p) RecipeBookView.open(this, p);
+            if (sender instanceof Player p) RecipeGui.openCatalog(this, p, 0);
             else sender.sendMessage("Команда только для игроков.");
             return true;
         }
