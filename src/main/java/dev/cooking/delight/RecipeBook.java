@@ -37,6 +37,7 @@ public final class RecipeBook {
     public List<PotRecipe> potRecipes() { return potRecipes; }
     public PotRecipe byId(String id) { return byId.get(id); }
     public CutRecipe cut(Material m) { return cuts.get(m); }
+    public Map<Material, CutRecipe> cuts() { return cuts; }
     public Set<Material> containers() { return containers; }
     public SkilletRecipe skillet(Material m) { return skillet.get(m); }
     public Map<Material, SkilletRecipe> skilletRecipes() { return skillet; }

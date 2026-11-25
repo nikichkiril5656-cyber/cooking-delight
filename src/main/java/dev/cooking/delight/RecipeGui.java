@@ -1,8 +1,11 @@
 package dev.cooking.delight;
 
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -14,12 +17,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
- * Книга рецептов в виде GUI: каталог предметов плагина, по клику открывается рецепт.
- * Каталог: 28 предметов на страницу. Рецепт: сетка, стрелка и результат, как в верстаке.
+ * Книга рецептов в виде GUI. Фон каждого экрана рисует ресурспак (глиф в заголовке окна),
+ * поэтому слоты ниже расставлены по рамкам из текстур book_*.png.
  */
 public final class RecipeGui {
     private RecipeGui() {}
@@ -29,14 +31,29 @@ public final class RecipeGui {
             19, 20, 21, 22, 23, 24, 25,
             28, 29, 30, 31, 32, 33, 34,
             37, 38, 39, 40, 41, 42, 43};
+    private static final int BACK = 49;
+    private static final int[] CRAFT_GRID = {10, 11, 12, 19, 20, 21, 28, 29, 30};
+    private static final int CRAFT_OUT = 25;
     private static final int[] POT_GRID = {10, 11, 12, 19, 20, 21};
-    private static final int ARROW = 23, RESULT = 25, BACK = 49;
+    private static final int POT_HEAT = 28, POT_TIME = 29, POT_CONT = 32, POT_OUT = 34;
+    private static final int SIMPLE_IN = 20, SIMPLE_OUT = 24, SIMPLE_HEAT = 37, SIMPLE_TIME = 38;
+    private static final int CUT_IN = 20, CUT_OUT = 24, CUT_TOOL = 33;
+
+    private static final Key FONT = Key.key("cookingdelight", "gui");
+    private static final TextColor TITLE_COLOR = TextColor.color(0x404040);
 
     private static int counter; // для смены вариантов ингредиентов раз в секунду
 
-    /** Запись каталога: либо предмет с верстак-рецептом, либо блюдо кастрюли, либо блюдо сковороды. */
+    private enum Mode {
+        CATALOG("\ue001"), CRAFT("\ue002"), POT("\ue003"), SIMPLE("\ue004"), CUTTING("\ue005");
+        final String glyph;
+        Mode(String glyph) { this.glyph = glyph; }
+    }
+
+    /** Запись каталога: предмет с верстак-рецептом, блюдо кастрюли, блюдо сковороды или нарезка. */
     public record Entry(String id, Component name, ItemStack icon, String kind,
-                        PotRecipe pot, CraftDef craft, RecipeBook.SkilletRecipe skillet) {}
+                        PotRecipe pot, CraftDef craft, RecipeBook.SkilletRecipe skillet,
+                        Material cutInput, RecipeBook.CutRecipe cut) {}
 
     public static final class Holder implements InventoryHolder {
         final Entry entry;   // null = каталог
@@ -44,7 +61,7 @@ public final class RecipeGui {
         boolean hasNext;
         Inventory inv;
         int[] cycleSlots = new int[0];
-        List<List<Material>> cycleMats = new ArrayList<>();
+        List<List<ItemStack>> cycleOpts = new ArrayList<>();
         List<List<Component>> cycleLore = new ArrayList<>();
 
         Holder(Entry entry, int page) {
@@ -60,12 +77,23 @@ public final class RecipeGui {
 
     // ---------- вспомогательное ----------
 
+    /** Заголовок: сдвиг влево, фон-глиф, возврат назад и обычный текст поверх. */
+    private static Component title(Mode m, Component text) {
+        return Component.empty()
+                .append(Component.text("\uf808" + m.glyph).font(FONT).color(NamedTextColor.WHITE))
+                .append(Component.text("\uf809").font(FONT))
+                .append(text.color(TITLE_COLOR));
+    }
+
     private static Component line(String text, NamedTextColor color) {
         return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
     }
 
     private static ItemStack named(Material m, String text, NamedTextColor color, List<Component> lore) {
-        ItemStack it = new ItemStack(m);
+        return relabel(new ItemStack(m), text, color, lore);
+    }
+
+    private static ItemStack relabel(ItemStack it, String text, NamedTextColor color, List<Component> lore) {
         ItemMeta meta = it.getItemMeta();
         meta.displayName(line(text, color));
         if (!lore.isEmpty()) meta.lore(lore);
@@ -73,25 +101,12 @@ public final class RecipeGui {
         return it;
     }
 
-    private static ItemStack pane() {
-        ItemStack it = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-        ItemMeta meta = it.getItemMeta();
-        meta.displayName(Component.text(" "));
-        it.setItemMeta(meta);
-        return it;
-    }
-
-    private static void fillAll(Inventory inv) {
-        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, pane());
-    }
-
-    private static void clear(Inventory inv, int... slots) {
-        for (int s : slots) inv.setItem(s, null);
-    }
-
+    /** Название предмета: своё имя простым текстом либо перевод названия материала. */
     private static Component nameOf(ItemStack it) {
         ItemMeta meta = it.getItemMeta();
-        if (meta != null && meta.hasDisplayName()) return meta.displayName();
+        if (meta != null && meta.hasDisplayName()) {
+            return Component.text(PlainTextComponentSerializer.plainText().serialize(meta.displayName()));
+        }
         return Component.translatable(it.getType().translationKey());
     }
 
@@ -104,8 +119,9 @@ public final class RecipeGui {
         return it;
     }
 
-    private static ItemStack stack(Material m, List<Component> lore) {
-        ItemStack it = new ItemStack(m);
+    private static ItemStack stack(ItemStack base, List<Component> lore) {
+        ItemStack it = base.clone();
+        it.setAmount(1);
         if (!lore.isEmpty()) {
             ItemMeta meta = it.getItemMeta();
             meta.lore(lore);
@@ -114,18 +130,34 @@ public final class RecipeGui {
         return it;
     }
 
-    private static List<Component> optionsLore(Collection<Material> mats) {
+    private static List<ItemStack> optionsOf(RecipeChoice choice) {
+        List<ItemStack> out = new ArrayList<>();
+        if (choice instanceof RecipeChoice.MaterialChoice mc) {
+            for (Material m : mc.getChoices()) out.add(new ItemStack(m));
+        } else if (choice instanceof RecipeChoice.ExactChoice ec) {
+            for (ItemStack s : ec.getChoices()) out.add(s.clone());
+        }
+        return out;
+    }
+
+    private static List<ItemStack> stacksOf(Iterable<Material> mats) {
+        List<ItemStack> out = new ArrayList<>();
+        for (Material m : mats) out.add(new ItemStack(m));
+        return out;
+    }
+
+    private static List<Component> optionsLore(List<ItemStack> opts) {
         List<Component> l = new ArrayList<>();
-        if (mats.size() <= 1) return l;
+        if (opts.size() <= 1) return l;
         l.add(line("Подходит любой из:", NamedTextColor.GRAY));
         int n = 0;
-        for (Material m : mats) {
+        for (ItemStack s : opts) {
             if (n++ >= 8) {
                 l.add(line("…", NamedTextColor.GRAY));
                 break;
             }
             l.add(Component.text("• ", NamedTextColor.DARK_GRAY)
-                    .append(Component.translatable(m.translationKey(), NamedTextColor.WHITE))
+                    .append(nameOf(s).color(NamedTextColor.WHITE))
                     .decoration(TextDecoration.ITALIC, false));
         }
         return l;
@@ -138,14 +170,21 @@ public final class RecipeGui {
         for (CraftDef c : plugin.crafts()) {
             ItemStack icon = plugin.items().create(c.id());
             if (icon == null) continue;
-            out.add(new Entry(c.id(), nameOf(icon), icon, "Предмет", null, c, null));
+            out.add(new Entry(c.id(), nameOf(icon), icon, "Предмет", null, c, null, null, null));
         }
         for (PotRecipe r : plugin.recipes().potRecipes()) {
-            out.add(new Entry(r.id(), nameOf(r.result()), r.result().clone(), "Кастрюля", r, null, null));
+            out.add(new Entry(r.id(), nameOf(r.result()), r.result().clone(), "Кастрюля", r, null, null, null, null));
         }
         for (RecipeBook.SkilletRecipe sr : plugin.recipes().skilletRecipes().values()) {
             ItemStack icon = new ItemStack(sr.result());
-            out.add(new Entry("skillet_" + sr.input().name().toLowerCase(), nameOf(icon), icon, "Сковорода", null, null, sr));
+            out.add(new Entry("skillet_" + sr.input().name().toLowerCase(), nameOf(icon), icon, "Сковорода",
+                    null, null, sr, null, null));
+        }
+        for (var e : plugin.recipes().cuts().entrySet()) {
+            RecipeBook.CutRecipe cr = e.getValue();
+            ItemStack icon = new ItemStack(cr.result(), cr.amount());
+            out.add(new Entry("cut_" + e.getKey().name().toLowerCase(), nameOf(icon), icon, "Разделочная доска",
+                    null, null, null, e.getKey(), cr));
         }
         return out;
     }
@@ -162,9 +201,8 @@ public final class RecipeGui {
         Holder h = new Holder(null, pg);
         h.hasNext = pg < pages - 1;
         Inventory inv = Bukkit.createInventory(h, 54,
-                Component.text("Книга рецептов (" + (pg + 1) + "/" + pages + ")", NamedTextColor.DARK_GRAY));
+                title(Mode.CATALOG, Component.text("Книга рецептов (" + (pg + 1) + "/" + pages + ")")));
         h.inv = inv;
-        fillAll(inv);
         for (int i = 0; i < LIST_SLOTS.length; i++) {
             int idx = pg * LIST_SLOTS.length + i;
             if (idx >= all.size()) break;
@@ -191,84 +229,90 @@ public final class RecipeGui {
     // ---------- рецепт ----------
 
     private static void openDetail(CookingDelight plugin, Player p, Entry e, int fromPage) {
+        Mode mode = e.craft() != null ? Mode.CRAFT
+                : e.pot() != null ? Mode.POT
+                : e.skillet() != null ? Mode.SIMPLE : Mode.CUTTING;
         Holder h = new Holder(e, fromPage);
-        Inventory inv = Bukkit.createInventory(h, 54,
-                Component.text("Рецепт: ", NamedTextColor.DARK_GRAY).append(e.name()));
+        Inventory inv = Bukkit.createInventory(h, 54, title(mode, e.name()));
         h.inv = inv;
-        fillAll(inv);
 
         List<Integer> slots = new ArrayList<>();
-        List<List<Material>> mats = new ArrayList<>();
+        List<List<ItemStack>> opts = new ArrayList<>();
         List<List<Component>> lores = new ArrayList<>();
 
-        if (e.craft() != null) {
+        if (mode == Mode.CRAFT) {
             String[] shape = e.craft().shape();
             for (int row = 0; row < 3; row++) {
                 for (int col = 0; col < 3; col++) {
-                    int slot = 10 + row * 9 + col;
-                    clear(inv, slot);
                     if (row >= shape.length || col >= shape[row].length()) continue;
-                    RecipeChoice.MaterialChoice choice = e.craft().ingredients().get(shape[row].charAt(col));
+                    RecipeChoice choice = e.craft().ingredients().get(shape[row].charAt(col));
                     if (choice == null) continue;
-                    slots.add(slot);
-                    mats.add(new ArrayList<>(choice.getChoices()));
-                    lores.add(optionsLore(choice.getChoices()));
+                    List<ItemStack> o = optionsOf(choice);
+                    if (o.isEmpty()) continue;
+                    slots.add(CRAFT_GRID[row * 3 + col]);
+                    opts.add(o);
+                    lores.add(optionsLore(o));
                 }
             }
-            inv.setItem(ARROW, named(Material.ARROW, "Верстак", NamedTextColor.GRAY, List.of()));
-            inv.setItem(RESULT, e.icon().clone());
-        } else if (e.pot() != null) {
+            inv.setItem(CRAFT_OUT, e.icon().clone());
+        } else if (mode == Mode.POT) {
             PotRecipe r = e.pot();
-            for (int s : POT_GRID) clear(inv, s);
             for (int i = 0; i < r.ingredients().size() && i < POT_GRID.length; i++) {
-                List<Material> list = new ArrayList<>(r.ingredients().get(i));
+                List<ItemStack> o = stacksOf(r.ingredients().get(i));
                 slots.add(POT_GRID[i]);
-                mats.add(list);
-                lores.add(optionsLore(list));
+                opts.add(o);
+                lores.add(optionsLore(o));
             }
-            clear(inv, 28, 29, 30);
             if (r.container() != null) {
-                inv.setItem(28, named(r.container(), "Нужна посуда", NamedTextColor.GRAY, List.of()));
+                inv.setItem(POT_CONT, named(r.container(), "Нужна посуда", NamedTextColor.GRAY, List.of()));
             }
-            addHeatAndClock(inv, r.time());
-            inv.setItem(ARROW, named(Material.ARROW, "Кастрюля", NamedTextColor.GRAY, List.of()));
+            addHeatAndClock(inv, POT_HEAT, POT_TIME, r.time());
             List<Component> lore = new ArrayList<>();
             ItemMeta meta = r.result().getItemMeta();
             if (meta != null && meta.hasFood()) {
                 lore.add(line("Сытость: " + meta.getFood().getNutrition(), NamedTextColor.GREEN));
             }
-            inv.setItem(RESULT, lore.isEmpty() ? r.result().clone() : withLore(r.result(), lore));
-        } else if (e.skillet() != null) {
+            inv.setItem(POT_OUT, lore.isEmpty() ? r.result().clone() : withLore(r.result(), lore));
+        } else if (mode == Mode.SIMPLE) {
             RecipeBook.SkilletRecipe r = e.skillet();
-            clear(inv, 20, 29, 30);
-            slots.add(20);
-            mats.add(new ArrayList<>(List.of(r.input())));
+            slots.add(SIMPLE_IN);
+            opts.add(new ArrayList<>(List.of(new ItemStack(r.input()))));
             lores.add(new ArrayList<>());
-            addHeatAndClock(inv, r.time());
-            inv.setItem(ARROW, named(Material.ARROW, "Сковорода", NamedTextColor.GRAY, List.of()));
-            inv.setItem(RESULT, new ItemStack(r.result()));
+            addHeatAndClock(inv, SIMPLE_HEAT, SIMPLE_TIME, r.time());
+            inv.setItem(SIMPLE_OUT, new ItemStack(r.result()));
+        } else {
+            slots.add(CUT_IN);
+            opts.add(new ArrayList<>(List.of(new ItemStack(e.cutInput()))));
+            lores.add(new ArrayList<>());
+            inv.setItem(CUT_OUT, new ItemStack(e.cut().result(), e.cut().amount()));
+            ItemStack knife = plugin.items().create("iron_knife");
+            if (knife != null) {
+                inv.setItem(CUT_TOOL, relabel(knife, "Нужен нож", NamedTextColor.GRAY,
+                        List.of(line("Положи предмет на доску", NamedTextColor.WHITE),
+                                line("и режь любым ножом (ПКМ)", NamedTextColor.WHITE))));
+            }
         }
 
         h.cycleSlots = slots.stream().mapToInt(Integer::intValue).toArray();
-        h.cycleMats = mats;
+        h.cycleOpts = opts;
         h.cycleLore = lores;
         for (int i = 0; i < h.cycleSlots.length; i++) {
-            inv.setItem(h.cycleSlots[i], stack(mats.get(i).get(0), lores.get(i)));
+            inv.setItem(h.cycleSlots[i], stack(opts.get(i).get(0), lores.get(i)));
         }
 
         inv.setItem(BACK, named(Material.ARROW, "Назад к списку", NamedTextColor.YELLOW, List.of()));
         p.openInventory(inv);
     }
 
-    private static void addHeatAndClock(Inventory inv, int seconds) {
+    private static void addHeatAndClock(Inventory inv, int heatSlot, int timeSlot, int seconds) {
         List<Component> heat = new ArrayList<>();
         heat.add(line("Поставь над источником тепла:", NamedTextColor.GRAY));
         heat.add(line("костёр, печь, лава, огонь или магма", NamedTextColor.WHITE));
-        inv.setItem(29, named(Material.CAMPFIRE, "Нужен нагрев", NamedTextColor.GOLD, heat));
+        inv.setItem(heatSlot, named(Material.CAMPFIRE, "Нужен нагрев", NamedTextColor.GOLD, heat));
 
         List<Component> time = new ArrayList<>();
         time.add(line("На кухонной печи: " + (int) Math.ceil(seconds / 1.5) + " с", NamedTextColor.GREEN));
-        inv.setItem(30, named(Material.CLOCK, "Время: " + seconds + " с", NamedTextColor.YELLOW, time));
+        inv.setItem(timeSlot, named(Material.CLOCK, "Время: " + seconds + " с", NamedTextColor.YELLOW, time));
     }
 
     /** Раз в секунду показывает следующий вариант ингредиента, если подходит несколько. */
@@ -277,9 +321,9 @@ public final class RecipeGui {
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!(p.getOpenInventory().getTopInventory().getHolder() instanceof Holder h) || h.entry == null) continue;
             for (int i = 0; i < h.cycleSlots.length; i++) {
-                List<Material> mats = h.cycleMats.get(i);
-                if (mats.size() < 2) continue;
-                h.inv.setItem(h.cycleSlots[i], stack(mats.get(counter % mats.size()), h.cycleLore.get(i)));
+                List<ItemStack> o = h.cycleOpts.get(i);
+                if (o.size() < 2) continue;
+                h.inv.setItem(h.cycleSlots[i], stack(o.get(counter % o.size()), h.cycleLore.get(i)));
             }
         }
     }

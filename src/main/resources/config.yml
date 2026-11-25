@@ -23,6 +23,18 @@ items:
     lore:
       - "Плавит в 1.5 раза быстрее обычной печи."
       - "Кастрюля и сковорода над ней готовят быстрее."
+  tomato:
+    material: APPLE
+    name: "<red>Помидор"
+    model: "cookingdelight:tomato"
+    nutrition: 1
+    saturation: 0.6
+  tomato_seeds:
+    material: BEETROOT_SEEDS
+    name: "<green>Семена помидора"
+    model: "cookingdelight:tomato_seeds"
+    lore:
+      - "Сажай на вспаханную землю."
   flint_knife:
     material: STONE_SWORD
     name: "<gray>Кремнёвый нож"
@@ -56,3 +68,16 @@ heat-sources:
   - SOUL_FIRE
   - LAVA
   - MAGMA_BLOCK
+
+# Культуры. Рост идёт только при свете (уровень 9+), на сухой грядке вдвое медленнее.
+crops:
+  tomato:
+    seeds: tomato_seeds     # id предмета-семян
+    fruit: tomato           # id плода
+    stages: 8               # 0-3 росток, 4-7 плодоносящий куст (7 = спелый)
+    regrow-stage: 4         # на какую стадию возвращается куст после сбора
+    stage-seconds: 90       # секунд на одну стадию
+    fruit-min: 1
+    fruit-max: 3
+    wild-chance: 0.05       # шанс дикого куста на каждый новый чанк в подходящем биоме
+    wild-biomes: [desert, badlands, eroded_badlands, wooded_badlands, savanna, savanna_plateau, windswept_savanna]

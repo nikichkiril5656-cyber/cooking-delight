@@ -31,14 +31,17 @@ public final class CookingDelight extends JavaPlugin {
     public NamespacedKey keySkilletFood;
     public NamespacedKey keyStove;
     public NamespacedKey keyStoveDisplay;
+    public NamespacedKey keyCrop;
 
     private CustomItems items;
     private RecipeBook recipes;
     private CookingManager manager;
+    private CropManager crops;
 
     public CustomItems items() { return items; }
     public RecipeBook recipes() { return recipes; }
     public CookingManager manager() { return manager; }
+    public CropManager crops() { return crops; }
 
     @Override
     public void onEnable() {
@@ -65,25 +68,32 @@ public final class CookingDelight extends JavaPlugin {
         keySkilletFood = new NamespacedKey(this, "skillet_food");
         keyStove = new NamespacedKey(this, "stove");
         keyStoveDisplay = new NamespacedKey(this, "stove_display");
+        keyCrop = new NamespacedKey(this, "crop");
 
         items = new CustomItems(this);
         recipes = new RecipeBook(this);
         recipes.load();
         manager = new CookingManager(this);
         manager.load();
+        crops = new CropManager(this);
+        crops.load();
 
         getServer().getPluginManager().registerEvents(new Listeners(this), this);
         getServer().getPluginManager().registerEvents(new RecipeGuiListener(this), this);
+        getServer().getPluginManager().registerEvents(new CropListener(this), this);
         registerCrafting();
 
         getServer().getScheduler().runTaskTimer(this, manager::tick, 20L, 20L);
         getServer().getScheduler().runTaskTimer(this, manager::save, 6000L, 6000L);
+        getServer().getScheduler().runTaskTimer(this, crops::tick, 20L, 20L);
+        getServer().getScheduler().runTaskTimer(this, crops::save, 6000L, 6000L);
         getServer().getScheduler().runTaskTimer(this, () -> RecipeGui.animate(), 20L, 20L);
     }
 
     @Override
     public void onDisable() {
         if (manager != null) manager.save();
+        if (crops != null) crops.save();
     }
 
     private final List<CraftDef> crafts = new ArrayList<>();
@@ -94,12 +104,12 @@ public final class CookingDelight extends JavaPlugin {
         return new RecipeChoice.MaterialChoice(m);
     }
 
-    private void craft(String id, String[] shape, Map<Character, RecipeChoice.MaterialChoice> ingredients) {
+    private void craft(String id, String[] shape, Map<Character, RecipeChoice> ingredients) {
         ItemStack result = items.create(id);
         if (result == null) return;
         ShapedRecipe r = new ShapedRecipe(new NamespacedKey(this, id), result);
         r.shape(shape);
-        for (Map.Entry<Character, RecipeChoice.MaterialChoice> e : ingredients.entrySet()) {
+        for (Map.Entry<Character, RecipeChoice> e : ingredients.entrySet()) {
             r.setIngredient(e.getKey(), e.getValue());
         }
         Bukkit.addRecipe(r);
@@ -108,12 +118,18 @@ public final class CookingDelight extends JavaPlugin {
 
     private void registerCrafting() {
         crafts.clear();
-        craft("pot", new String[]{"I I", "IBI", "III"},
-                Map.of('I', mc(Material.IRON_INGOT), 'B', mc(Material.BOWL)));
-        craft("skillet", new String[]{"II ", "II ", "  S"},
-                Map.of('I', mc(Material.IRON_INGOT), 'S', mc(Material.STICK)));
-        craft("stove", new String[]{"III", "BCB", "BBB"},
-                Map.of('I', mc(Material.IRON_INGOT), 'B', mc(Material.BRICK), 'C', mc(Material.CAMPFIRE)));
+        // рецепты как в Farmer's Delight (деревянная ложка заменена палкой)
+        craft("pot", new String[]{"BSB", "IWI", "III"},
+                Map.of('B', mc(Material.BRICK), 'S', mc(Material.STICK),
+                        'I', mc(Material.IRON_INGOT), 'W', mc(Material.WATER_BUCKET)));
+        craft("skillet", new String[]{" II", " II", "B  "},
+                Map.of('I', mc(Material.IRON_INGOT), 'B', mc(Material.BRICK)));
+        craft("stove", new String[]{"III", "B B", "BCB"},
+                Map.of('I', mc(Material.IRON_INGOT), 'B', mc(Material.BRICKS), 'C', mc(Material.CAMPFIRE)));
+        ItemStack tomato = items.create("tomato");
+        if (tomato != null) {
+            craft("tomato_seeds", new String[]{"T"}, Map.of('T', new RecipeChoice.ExactChoice(tomato)));
+        }
         craft("board", new String[]{" S ", "PPP"},
                 Map.of('S', mc(Material.STICK), 'P', new RecipeChoice.MaterialChoice(Tag.PLANKS)));
         knifeRecipe("flint_knife", Material.FLINT);
