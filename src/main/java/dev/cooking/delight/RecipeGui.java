@@ -53,7 +53,7 @@ public final class RecipeGui {
     /** Запись каталога: предмет с верстак-рецептом, блюдо кастрюли, блюдо сковороды или нарезка. */
     public record Entry(String id, Component name, ItemStack icon, String kind,
                         PotRecipe pot, CraftDef craft, RecipeBook.SkilletRecipe skillet,
-                        Material cutInput, RecipeBook.CutRecipe cut) {}
+                        String cutInput, RecipeBook.CutRecipe cut) {}
 
     public static final class Holder implements InventoryHolder {
         final Entry entry;   // null = каталог
@@ -140,9 +140,12 @@ public final class RecipeGui {
         return out;
     }
 
-    private static List<ItemStack> stacksOf(Iterable<Material> mats) {
+    private static List<ItemStack> stacksOf(CookingDelight plugin, Iterable<String> keys) {
         List<ItemStack> out = new ArrayList<>();
-        for (Material m : mats) out.add(new ItemStack(m));
+        for (String k : keys) {
+            ItemStack it = plugin.items().stackOf(k, 1);
+            if (it != null) out.add(it);
+        }
         return out;
     }
 
@@ -176,14 +179,14 @@ public final class RecipeGui {
             out.add(new Entry(r.id(), nameOf(r.result()), r.result().clone(), "Кастрюля", r, null, null, null, null));
         }
         for (RecipeBook.SkilletRecipe sr : plugin.recipes().skilletRecipes().values()) {
-            ItemStack icon = new ItemStack(sr.result());
-            out.add(new Entry("skillet_" + sr.input().name().toLowerCase(), nameOf(icon), icon, "Сковорода",
+            ItemStack icon = sr.result().clone();
+            out.add(new Entry("skillet_" + sr.input().toLowerCase(), nameOf(icon), icon, "Сковорода",
                     null, null, sr, null, null));
         }
         for (var e : plugin.recipes().cuts().entrySet()) {
             RecipeBook.CutRecipe cr = e.getValue();
-            ItemStack icon = new ItemStack(cr.result(), cr.amount());
-            out.add(new Entry("cut_" + e.getKey().name().toLowerCase(), nameOf(icon), icon, "Разделочная доска",
+            ItemStack icon = cr.result().clone();
+            out.add(new Entry("cut_" + e.getKey().toLowerCase(), nameOf(icon), icon, "Разделочная доска",
                     null, null, null, e.getKey(), cr));
         }
         return out;
@@ -258,7 +261,8 @@ public final class RecipeGui {
         } else if (mode == Mode.POT) {
             PotRecipe r = e.pot();
             for (int i = 0; i < r.ingredients().size() && i < POT_GRID.length; i++) {
-                List<ItemStack> o = stacksOf(r.ingredients().get(i));
+                List<ItemStack> o = stacksOf(plugin, r.ingredients().get(i));
+                if (o.isEmpty()) continue;
                 slots.add(POT_GRID[i]);
                 opts.add(o);
                 lores.add(optionsLore(o));
@@ -276,15 +280,17 @@ public final class RecipeGui {
         } else if (mode == Mode.SIMPLE) {
             RecipeBook.SkilletRecipe r = e.skillet();
             slots.add(SIMPLE_IN);
-            opts.add(new ArrayList<>(List.of(new ItemStack(r.input()))));
+            ItemStack in = plugin.items().stackOf(r.input(), 1);
+            opts.add(new ArrayList<>(List.of(in != null ? in : new ItemStack(Material.BARRIER))));
             lores.add(new ArrayList<>());
             addHeatAndClock(inv, SIMPLE_HEAT, SIMPLE_TIME, r.time());
-            inv.setItem(SIMPLE_OUT, new ItemStack(r.result()));
+            inv.setItem(SIMPLE_OUT, r.result().clone());
         } else {
             slots.add(CUT_IN);
-            opts.add(new ArrayList<>(List.of(new ItemStack(e.cutInput()))));
+            ItemStack cin = plugin.items().stackOf(e.cutInput(), 1);
+            opts.add(new ArrayList<>(List.of(cin != null ? cin : new ItemStack(Material.BARRIER))));
             lores.add(new ArrayList<>());
-            inv.setItem(CUT_OUT, new ItemStack(e.cut().result(), e.cut().amount()));
+            inv.setItem(CUT_OUT, e.cut().result().clone());
             ItemStack knife = plugin.items().create("iron_knife");
             if (knife != null) {
                 inv.setItem(CUT_TOOL, relabel(knife, "Нужен нож", NamedTextColor.GRAY,

@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class CookingDelight extends JavaPlugin {
-    private static final int RECIPES_VERSION = 3;
+    private static final int RECIPES_VERSION = 4;
 
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;

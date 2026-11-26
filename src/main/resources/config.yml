@@ -35,6 +35,242 @@ items:
     model: "cookingdelight:tomato_seeds"
     lore:
       - "Сажай на вспаханную землю."
+  cabbage:
+    material: BREAD
+    name: "<green>Капуста"
+    model: "cookingdelight:cabbage"
+    nutrition: 2
+    saturation: 1.2
+  cabbage_leaf:
+    material: BREAD
+    name: "<green>Капустный лист"
+    model: "cookingdelight:cabbage_leaf"
+    nutrition: 1
+    saturation: 0.6
+  cabbage_seeds:
+    material: BEETROOT_SEEDS
+    name: "<green>Семена капусты"
+    model: "cookingdelight:cabbage_seeds"
+  onion:
+    material: BREAD
+    name: "<yellow>Лук"
+    model: "cookingdelight:onion"
+    nutrition: 2
+    saturation: 1.2
+  rice:
+    material: WHEAT
+    name: "<white>Рис"
+    model: "cookingdelight:rice"
+  cooked_rice:
+    material: BREAD
+    name: "<white>Варёный рис"
+    model: "cookingdelight:cooked_rice"
+    nutrition: 6
+    saturation: 7.2
+  bacon:
+    material: BREAD
+    name: "<red>Бекон"
+    model: "cookingdelight:bacon"
+    nutrition: 2
+    saturation: 1.2
+  cooked_bacon:
+    material: BREAD
+    name: "<gold>Жареный бекон"
+    model: "cookingdelight:cooked_bacon"
+    nutrition: 4
+    saturation: 4.8
+  chicken_cuts:
+    material: BREAD
+    name: "<red>Куриные кусочки"
+    model: "cookingdelight:chicken_cuts"
+    nutrition: 1
+    saturation: 0.6
+  cooked_chicken_cuts:
+    material: BREAD
+    name: "<gold>Жареные куриные кусочки"
+    model: "cookingdelight:cooked_chicken_cuts"
+    nutrition: 3
+    saturation: 3.6
+  mutton_chops:
+    material: BREAD
+    name: "<red>Бараньи отбивные"
+    model: "cookingdelight:mutton_chops"
+    nutrition: 1
+    saturation: 0.6
+  cooked_mutton_chops:
+    material: BREAD
+    name: "<gold>Жареные бараньи отбивные"
+    model: "cookingdelight:cooked_mutton_chops"
+    nutrition: 3
+    saturation: 3.6
+  cod_slice:
+    material: BREAD
+    name: "<aqua>Ломтик трески"
+    model: "cookingdelight:cod_slice"
+    nutrition: 1
+    saturation: 0.6
+  cooked_cod_slice:
+    material: BREAD
+    name: "<gold>Жареный ломтик трески"
+    model: "cookingdelight:cooked_cod_slice"
+    nutrition: 3
+    saturation: 3.6
+  salmon_slice:
+    material: BREAD
+    name: "<red>Ломтик лосося"
+    model: "cookingdelight:salmon_slice"
+    nutrition: 1
+    saturation: 0.6
+  cooked_salmon_slice:
+    material: BREAD
+    name: "<gold>Жареный ломтик лосося"
+    model: "cookingdelight:cooked_salmon_slice"
+    nutrition: 3
+    saturation: 3.6
+  bacon_sandwich:
+    material: BREAD
+    name: "<yellow>Сэндвич с беконом"
+    model: "cookingdelight:bacon_sandwich"
+    nutrition: 8
+    saturation: 9.6
+  barbecue_stick:
+    material: BREAD
+    name: "<yellow>Шашлык"
+    model: "cookingdelight:barbecue_stick"
+    nutrition: 8
+    saturation: 9.6
+  cabbage_rolls:
+    material: BREAD
+    name: "<yellow>Голубцы"
+    model: "cookingdelight:cabbage_rolls"
+    nutrition: 5
+    saturation: 6.0
+  chicken_sandwich:
+    material: BREAD
+    name: "<yellow>Куриный сэндвич"
+    model: "cookingdelight:chicken_sandwich"
+    nutrition: 8
+    saturation: 9.6
+  cod_roll:
+    material: BREAD
+    name: "<yellow>Ролл с треской"
+    model: "cookingdelight:cod_roll"
+    nutrition: 7
+    saturation: 8.4
+  dumplings:
+    material: BREAD
+    name: "<yellow>Пельмени"
+    model: "cookingdelight:dumplings"
+    nutrition: 8
+    saturation: 9.6
+  egg_sandwich:
+    material: BREAD
+    name: "<yellow>Яичный сэндвич"
+    model: "cookingdelight:egg_sandwich"
+    nutrition: 8
+    saturation: 9.6
+  gleaming_salad:
+    material: BREAD
+    name: "<yellow>Сияющий салат"
+    model: "cookingdelight:gleaming_salad"
+    nutrition: 12
+    saturation: 14.4
+  hamburger:
+    material: BREAD
+    name: "<yellow>Гамбургер"
+    model: "cookingdelight:hamburger"
+    nutrition: 8
+    saturation: 9.6
+  kelp_roll:
+    material: BREAD
+    name: "<yellow>Ролл из ламинарии"
+    model: "cookingdelight:kelp_roll"
+    nutrition: 5
+    saturation: 6.0
+  kelp_roll_slice:
+    material: BREAD
+    name: "<yellow>Ломтик ролла из ламинарии"
+    model: "cookingdelight:kelp_roll_slice"
+    nutrition: 3
+    saturation: 3.6
+  mutton_wrap:
+    material: BREAD
+    name: "<yellow>Ролл с бараниной"
+    model: "cookingdelight:mutton_wrap"
+    nutrition: 10
+    saturation: 12.0
+  honey_glazed_ham:
+    material: BREAD
+    name: "<gold>Ветчина в медовой глазури"
+    model: "cookingdelight:honey_glazed_ham"
+    nutrition: 12
+    saturation: 14.4
+  roast_chicken:
+    material: BREAD
+    name: "<gold>Жареная курица"
+    model: "cookingdelight:roast_chicken"
+    nutrition: 12
+    saturation: 14.4
+  salmon_roll:
+    material: BREAD
+    name: "<gold>Ролл с лососем"
+    model: "cookingdelight:salmon_roll"
+    nutrition: 9
+    saturation: 10.8
+  shepherds_pie:
+    material: BREAD
+    name: "<gold>Пастуший пирог"
+    model: "cookingdelight:shepherds_pie"
+    nutrition: 12
+    saturation: 14.4
+  stuffed_potato:
+    material: BREAD
+    name: "<gold>Фаршированный картофель"
+    model: "cookingdelight:stuffed_potato"
+    nutrition: 10
+    saturation: 12.0
+  stuffed_pumpkin:
+    material: BREAD
+    name: "<gold>Фаршированная тыква"
+    model: "cookingdelight:stuffed_pumpkin"
+    nutrition: 12
+    saturation: 14.4
+  apple_cider:
+    material: HONEY_BOTTLE
+    name: "<white>Яблочный сидр"
+    model: "cookingdelight:apple_cider"
+    nutrition: 2
+    saturation: 3.0
+    always-eat: true
+  hot_cocoa:
+    material: HONEY_BOTTLE
+    name: "<white>Горячее какао"
+    model: "cookingdelight:hot_cocoa"
+    nutrition: 2
+    saturation: 3.0
+    always-eat: true
+  melon_juice:
+    material: HONEY_BOTTLE
+    name: "<white>Дынный сок"
+    model: "cookingdelight:melon_juice"
+    nutrition: 2
+    saturation: 3.0
+    always-eat: true
+  milk_bottle:
+    material: HONEY_BOTTLE
+    name: "<white>Бутылка молока"
+    model: "cookingdelight:milk_bottle"
+    nutrition: 0
+    saturation: 0.0
+    always-eat: true
+  dog_food:
+    material: WHEAT
+    name: "<white>Корм для собак"
+    model: "cookingdelight:dog_food"
+  horse_feed:
+    material: WHEAT
+    name: "<white>Корм для лошадей"
+    model: "cookingdelight:horse_feed"
   flint_knife:
     material: STONE_SWORD
     name: "<gray>Кремнёвый нож"
@@ -81,3 +317,39 @@ crops:
     fruit-max: 3
     wild-chance: 0.05       # шанс дикого куста на каждый новый чанк в подходящем биоме
     wild-biomes: [desert, badlands, eroded_badlands, wooded_badlands, savanna, savanna_plateau, windswept_savanna]
+
+  cabbage:
+    seeds: cabbage_seeds
+    fruit: cabbage
+    stages: 8
+    regrow-stage: -1        # после сбора куст исчезает, остаются семена
+    harvest-seeds: 1
+    stage-seconds: 60
+    fruit-min: 1
+    fruit-max: 1
+    wild-chance: 0.05
+    wild-biomes: [beach, snowy_beach, stony_shore]
+  onion:
+    seeds: onion            # лук сажается сам
+    fruit: onion
+    stages: 4
+    regrow-stage: -1
+    harvest-seeds: 1
+    stage-seconds: 120
+    fruit-min: 1
+    fruit-max: 2
+    wild-chance: 0.05
+    wild-biomes: [plains, sunflower_plains, forest, birch_forest, flower_forest, meadow]
+  # Только дикие кусты (обычная посадка у этих культур ванильная)
+  beetroot:
+    fruit: BEETROOT
+    wild-chance: 0.04
+    wild-biomes: [beach, snowy_beach, stony_shore]
+  carrot:
+    fruit: CARROT
+    wild-chance: 0.04
+    wild-biomes: [plains, forest, birch_forest, meadow]
+  potato:
+    fruit: POTATO
+    wild-chance: 0.04
+    wild-biomes: [taiga, snowy_taiga, old_growth_pine_taiga, old_growth_spruce_taiga, snowy_plains, grove]

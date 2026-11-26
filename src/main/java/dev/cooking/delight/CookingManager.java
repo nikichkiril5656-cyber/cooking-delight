@@ -329,7 +329,7 @@ public final class CookingManager {
 
     private void tickSkillet(SkilletState s, Block b) {
         if (s.item == null) return;
-        RecipeBook.SkilletRecipe r = plugin.recipes().skillet(s.item.getType());
+        RecipeBook.SkilletRecipe r = plugin.recipes().skillet(s.item);
         if (r == null) return; // уже готово
         Block below = b.getRelative(BlockFace.DOWN);
         if (!isHeated(below)) return;
@@ -340,7 +340,7 @@ public final class CookingManager {
             b.getWorld().playSound(top, Sound.BLOCK_CAMPFIRE_CRACKLE, SoundCategory.BLOCKS, 0.5f, 1f);
         }
         if (s.progress >= r.time()) {
-            s.item = new ItemStack(r.result(), 1);
+            s.item = r.result().clone();
             s.progress = 0;
             showFood(b, s.item.clone());
             b.getWorld().playSound(top, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.2f);
@@ -355,10 +355,10 @@ public final class CookingManager {
     }
 
     private PotRecipe match(PotState p) {
-        List<Material> have = new ArrayList<>();
+        List<String> have = new ArrayList<>();
         for (int s : PotState.ING) {
             ItemStack it = p.getInventory().getItem(s);
-            if (it != null && !it.getType().isAir()) have.add(it.getType());
+            if (it != null && !it.getType().isAir()) have.add(plugin.items().keyOf(it));
         }
         if (have.isEmpty()) return null;
         ItemStack cont = p.getInventory().getItem(PotState.CONT);
@@ -370,12 +370,12 @@ public final class CookingManager {
     }
 
     /** Каждому предмету подбираем свой слот рецепта (слот может допускать несколько материалов). */
-    private boolean matches(List<Material> have, List<Set<Material>> slots) {
+    private boolean matches(List<String> have, List<Set<String>> slots) {
         if (have.size() != slots.size()) return false;
         return assign(have, slots, 0, new boolean[slots.size()]);
     }
 
-    private boolean assign(List<Material> have, List<Set<Material>> slots, int i, boolean[] used) {
+    private boolean assign(List<String> have, List<Set<String>> slots, int i, boolean[] used) {
         if (i == have.size()) return true;
         for (int s = 0; s < slots.size(); s++) {
             if (!used[s] && slots.get(s).contains(have.get(i))) {

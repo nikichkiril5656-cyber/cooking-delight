@@ -3,6 +3,7 @@ package dev.cooking.delight;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -18,16 +19,16 @@ import java.io.File;
 import java.util.*;
 
 public final class RecipeBook {
-    public record CutRecipe(Material result, int amount) {}
-    public record SkilletRecipe(Material input, Material result, int time) {}
+    public record CutRecipe(ItemStack result) {}
+    public record SkilletRecipe(String input, ItemStack result, int time) {}
 
     private final CookingDelight plugin;
     private final List<PotRecipe> potRecipes = new ArrayList<>();
     private final Map<String, PotRecipe> byId = new HashMap<>();
-    private final Map<Material, CutRecipe> cuts = new EnumMap<>(Material.class);
+    private final Map<String, CutRecipe> cuts = new LinkedHashMap<>();
     private final Set<Material> containers = EnumSet.noneOf(Material.class);
-    private final Map<Material, SkilletRecipe> skillet = new EnumMap<>(Material.class);
-    private final Map<String, Set<Material>> tags = new HashMap<>();
+    private final Map<String, SkilletRecipe> skillet = new LinkedHashMap<>();
+    private final Map<String, Set<String>> tags = new HashMap<>();
     private final Map<String, String> tagNames = new HashMap<>();
 
     public RecipeBook(CookingDelight plugin) {
@@ -36,18 +37,36 @@ public final class RecipeBook {
 
     public List<PotRecipe> potRecipes() { return potRecipes; }
     public PotRecipe byId(String id) { return byId.get(id); }
-    public CutRecipe cut(Material m) { return cuts.get(m); }
-    public Map<Material, CutRecipe> cuts() { return cuts; }
+    public CutRecipe cut(ItemStack it) { return cuts.get(plugin.items().keyOf(it)); }
+    public Map<String, CutRecipe> cuts() { return cuts; }
     public Set<Material> containers() { return containers; }
-    public SkilletRecipe skillet(Material m) { return skillet.get(m); }
-    public Map<Material, SkilletRecipe> skilletRecipes() { return skillet; }
+    public SkilletRecipe skillet(ItemStack it) { return skillet.get(plugin.items().keyOf(it)); }
+    public Map<String, SkilletRecipe> skilletRecipes() { return skillet; }
 
-    private Component tagLabel(String key, Set<Material> items) {
+    /** Ключ из рецепта: свой предмет (id из config.yml) либо материал. null, если не найден. */
+    private String resolveKey(String raw) {
+        String n = raw.trim();
+        if (plugin.items().isCustomId(n)) return n;
+        Material m = Material.matchMaterial(n);
+        return m == null ? null : m.name();
+    }
+
+    private Component keyName(String key) {
+        ItemStack it = plugin.items().stackOf(key, 1);
+        if (it == null) return Component.text(key);
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null && meta.hasDisplayName()) {
+            return Component.text(PlainTextComponentSerializer.plainText().serialize(meta.displayName()));
+        }
+        return Component.translatable(it.getType().translationKey());
+    }
+
+    private Component tagLabel(String key, Set<String> items) {
         String custom = tagNames.get(key);
         if (custom != null) return Component.text(custom);
         if (items.size() > 3) return Component.text(key);
         List<Component> names = new ArrayList<>();
-        for (Material m : items) names.add(Component.translatable(m.translationKey()));
+        for (String k : items) names.add(keyName(k));
         return Component.join(JoinConfiguration.separator(Component.text(" / ")), names);
     }
 
@@ -65,11 +84,11 @@ public final class RecipeBook {
         ConfigurationSection ts = y.getConfigurationSection("tags");
         if (ts != null) {
             for (String key : ts.getKeys(false)) {
-                Set<Material> set = EnumSet.noneOf(Material.class);
+                Set<String> set = new LinkedHashSet<>();
                 for (String n : ts.getStringList(key)) {
-                    Material m = Material.matchMaterial(n);
-                    if (m == null) plugin.getLogger().warning("Tag '" + key + "': unknown material " + n);
-                    else set.add(m);
+                    String k = resolveKey(n);
+                    if (k == null) plugin.getLogger().warning("Tag '" + key + "': unknown item " + n);
+                    else set.add(k);
                 }
                 tags.put(key, set);
             }
@@ -83,21 +102,21 @@ public final class RecipeBook {
                 ConfigurationSection s = pot.getConfigurationSection(id);
                 if (s == null) continue;
                 try {
-                    List<Set<Material>> slots = new ArrayList<>();
+                    List<Set<String>> slots = new ArrayList<>();
                     List<Component> labels = new ArrayList<>();
                     for (String raw : s.getStringList("ingredients")) {
                         String n = raw.trim();
                         if (n.startsWith("#")) {
                             String key = n.substring(1);
-                            Set<Material> set = tags.get(key);
+                            Set<String> set = tags.get(key);
                             if (set == null || set.isEmpty()) throw new IllegalArgumentException("unknown or empty tag " + n);
                             slots.add(set);
                             labels.add(tagLabel(key, set));
                         } else {
-                            Material m = Material.matchMaterial(n);
-                            if (m == null) throw new IllegalArgumentException("unknown material " + n);
-                            slots.add(EnumSet.of(m));
-                            labels.add(Component.translatable(m.translationKey()));
+                            String k = resolveKey(n);
+                            if (k == null) throw new IllegalArgumentException("unknown item " + n);
+                            slots.add(new LinkedHashSet<>(List.of(k)));
+                            labels.add(keyName(k));
                         }
                     }
                     if (slots.isEmpty() || slots.size() > PotState.ING.length)
@@ -152,25 +171,27 @@ public final class RecipeBook {
         ConfigurationSection cut = y.getConfigurationSection("cutting");
         if (cut != null) {
             for (String in : cut.getKeys(false)) {
-                Material im = Material.matchMaterial(in);
-                Material om = Material.matchMaterial(cut.getString(in + ".result", ""));
-                if (im == null || om == null) {
+                String ik = resolveKey(in);
+                String ok = resolveKey(cut.getString(in + ".result", ""));
+                ItemStack out = ok == null ? null : plugin.items().stackOf(ok, cut.getInt(in + ".amount", 1));
+                if (ik == null || out == null) {
                     plugin.getLogger().warning("Cutting recipe '" + in + "' skipped");
                     continue;
                 }
-                cuts.put(im, new CutRecipe(om, Math.max(1, cut.getInt(in + ".amount", 1))));
+                cuts.put(ik, new CutRecipe(out));
             }
         }
         ConfigurationSection sk = y.getConfigurationSection("skillet");
         if (sk != null) {
             for (String in : sk.getKeys(false)) {
-                Material im = Material.matchMaterial(in);
-                Material om = Material.matchMaterial(sk.getString(in + ".result", ""));
-                if (im == null || om == null) {
+                String ik = resolveKey(in);
+                String ok = resolveKey(sk.getString(in + ".result", ""));
+                ItemStack out = ok == null ? null : plugin.items().stackOf(ok, 1);
+                if (ik == null || out == null) {
                     plugin.getLogger().warning("Skillet recipe '" + in + "' skipped");
                     continue;
                 }
-                skillet.put(im, new SkilletRecipe(im, om, Math.max(1, sk.getInt(in + ".time", 10))));
+                skillet.put(ik, new SkilletRecipe(ik, out, Math.max(1, sk.getInt(in + ".time", 10))));
             }
         }
         plugin.getLogger().info("Loaded " + potRecipes.size() + " pot recipes, " + skillet.size() + " skillet recipes, "

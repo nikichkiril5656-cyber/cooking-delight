@@ -12,6 +12,6 @@ import java.util.Set;
  * ingredients: по одному набору допустимых материалов на слот (группа #tag даёт несколько вариантов).
  * labels: подписи слотов для книги рецептов.
  */
-public record PotRecipe(String id, List<Set<Material>> ingredients, List<Component> labels, Material container,
+public record PotRecipe(String id, List<Set<String>> ingredients, List<Component> labels, Material container,
                         ItemStack result, int time, List<PotionEffect> effects) {
 }

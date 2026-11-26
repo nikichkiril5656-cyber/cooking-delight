@@ -146,7 +146,7 @@ public final class Listeners implements Listener {
     private void handleSkillet(Player p, Block b, SkilletState sk, ItemStack held) {
         Location at = b.getLocation().add(0.5, 0.3, 0.5);
         if (sk.item == null) { // кладём сырую еду
-            RecipeBook.SkilletRecipe r = held.getType().isAir() ? null : plugin.recipes().skillet(held.getType());
+            RecipeBook.SkilletRecipe r = held.getType().isAir() ? null : plugin.recipes().skillet(held);
             if (r == null) return;
             ItemStack one = held.clone();
             one.setAmount(1);
@@ -216,9 +216,9 @@ public final class Listeners implements Listener {
         }
 
         if (isKnife) {
-            RecipeBook.CutRecipe r = plugin.recipes().cut(display.getItemStack().getType());
+            RecipeBook.CutRecipe r = plugin.recipes().cut(display.getItemStack());
             if (r == null) return;
-            b.getWorld().dropItemNaturally(at, new ItemStack(r.result(), r.amount()));
+            b.getWorld().dropItemNaturally(at, r.result().clone());
             display.remove();
             b.getWorld().playSound(at, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.8f, 1.5f);
             damage(p, held);

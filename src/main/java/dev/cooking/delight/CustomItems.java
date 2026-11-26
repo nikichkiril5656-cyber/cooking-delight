@@ -38,6 +38,7 @@ public final class CustomItems {
             FoodComponent food = meta.getFood();
             food.setNutrition(s.getInt("nutrition", 1));
             food.setSaturation((float) s.getDouble("saturation", 0.5));
+            if (s.getBoolean("always-eat", false)) food.setCanAlwaysEat(true);
             meta.setFood(food);
         }
         String model = s.getString("model");
@@ -53,6 +54,29 @@ public final class CustomItems {
     public String idOf(ItemStack it) {
         if (it == null || it.getType().isAir() || !it.hasItemMeta()) return null;
         return it.getItemMeta().getPersistentDataContainer().get(plugin.keyItem, PersistentDataType.STRING);
+    }
+
+    /** Ключ предмета для рецептов: id предмета плагина либо название материала (CARROT). */
+    public String keyOf(ItemStack it) {
+        if (it == null || it.getType().isAir()) return null;
+        String id = idOf(it);
+        return id != null ? id : it.getType().name();
+    }
+
+    /** Предмет по ключу из рецепта: свой (id из config.yml) либо ванильный материал. */
+    public ItemStack stackOf(String key, int amount) {
+        ItemStack it = create(key);
+        if (it == null) {
+            Material m = Material.matchMaterial(key);
+            if (m == null) return null;
+            it = new ItemStack(m);
+        }
+        it.setAmount(Math.max(1, amount));
+        return it;
+    }
+
+    public boolean isCustomId(String token) {
+        return plugin.getConfig().isConfigurationSection("items." + token);
     }
 
     public Material blockMaterial(String id) {
