@@ -1,4 +1,4 @@
-version: 4
+version: 5
 
 # Группы ингредиентов (аналог тегов из мода). В рецептах пишутся как #имя.
 # В группах и рецептах можно писать материал (CARROT) или id предмета плагина из config.yml (onion).
@@ -124,3 +124,4 @@ cutting:
   COD: {result: cod_slice, amount: 2}
   SALMON: {result: salmon_slice, amount: 2}
   cabbage: {result: cabbage_leaf, amount: 2}
+  rice_panicle: {result: rice, amount: 2}

@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class CookingDelight extends JavaPlugin {
-    private static final int RECIPES_VERSION = 4;
+    private static final int RECIPES_VERSION = 5;
 
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;
@@ -32,6 +32,7 @@ public final class CookingDelight extends JavaPlugin {
     public NamespacedKey keyStove;
     public NamespacedKey keyStoveDisplay;
     public NamespacedKey keyCrop;
+    public NamespacedKey keyCropUpper;
 
     private CustomItems items;
     private RecipeBook recipes;
@@ -69,6 +70,7 @@ public final class CookingDelight extends JavaPlugin {
         keyStove = new NamespacedKey(this, "stove");
         keyStoveDisplay = new NamespacedKey(this, "stove_display");
         keyCrop = new NamespacedKey(this, "crop");
+        keyCropUpper = new NamespacedKey(this, "crop_upper");
 
         items = new CustomItems(this);
         recipes = new RecipeBook(this);

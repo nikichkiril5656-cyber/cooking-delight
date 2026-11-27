@@ -61,6 +61,14 @@ items:
     material: WHEAT
     name: "<white>Рис"
     model: "cookingdelight:rice"
+    lore:
+      - "Сажай на воду: источник глубиной в один блок над дном."
+  rice_panicle:
+    material: WHEAT
+    name: "<yellow>Метёлка риса"
+    model: "cookingdelight:rice_panicle"
+    lore:
+      - "Режь ножом на доске, чтобы получить рис."
   cooked_rice:
     material: BREAD
     name: "<white>Варёный рис"
@@ -353,3 +361,18 @@ crops:
     fruit: POTATO
     wild-chance: 0.04
     wild-biomes: [taiga, snowy_taiga, old_growth_pine_taiga, old_growth_spruce_taiga, snowy_plains, grove]
+  # Рис растёт в воде: нижняя часть и метёлки сверху (стадии 4-7)
+  rice:
+    seeds: rice
+    fruit: rice_panicle
+    habitat: water
+    stages: 8
+    upper-from-stage: 4
+    supporting: true
+    wild-upper: true
+    regrow-stage: 4
+    stage-seconds: 80
+    fruit-min: 1
+    fruit-max: 2
+    wild-chance: 0.05
+    wild-biomes: [swamp, mangrove_swamp, jungle, sparse_jungle, bamboo_jungle]

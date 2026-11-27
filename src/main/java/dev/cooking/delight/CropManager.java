@@ -20,7 +20,9 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Свои культуры (томат и далее): невидимый блок света + модель (item_display) + Interaction-хитбокс.
+ * Свои культуры (томат, капуста, лук, рис): модель (item_display) и Interaction-хитбокс.
+ * Наземные культуры занимают блок света (невидимый, без коллизии), водные (рис) растут прямо в воде.
+ * Растение может быть двухэтажным: верхняя часть (метёлки риса) рисуется в блоке выше.
  * Параметры каждой культуры лежат в config.yml, раздел crops.
  */
 public final class CropManager {
@@ -60,25 +62,59 @@ public final class CropManager {
         return null;
     }
 
+    public boolean isWater(String type) {
+        ConfigurationSection s = cfg(type);
+        return s != null && "water".equals(s.getString("habitat", "land"));
+    }
+
     private int ripeStage(String type) {
         ConfigurationSection s = cfg(type);
         return s == null ? 7 : s.getInt("stages", 8) - 1;
+    }
+
+    private int upperFrom(String type) {
+        ConfigurationSection s = cfg(type);
+        return s == null ? -1 : s.getInt("upper-from-stage", -1);
     }
 
     public Crop at(Block b) {
         return crops.get(CookingManager.key(b));
     }
 
-    // ---------- модель и части ----------
+    // ---------- имена моделей ----------
 
-    private ItemStack modelItem(String type, int stage) {
+    private String lowerModel(String type, int stage) {
+        if (stage < 0) return type + "_wild";
+        int from = upperFrom(type);
+        if (from >= 0 && stage >= from) {
+            ConfigurationSection s = cfg(type);
+            if (s != null && s.getBoolean("supporting", false)) return type + "_supporting";
+            return type + "_stage_" + (from - 1);
+        }
+        return type + "_stage_" + stage;
+    }
+
+    /** Модель верхнего этажа или null, если растение одноэтажное на этой стадии. */
+    private String upperModel(String type, int stage) {
+        ConfigurationSection s = cfg(type);
+        if (stage < 0) return s != null && s.getBoolean("wild-upper", false) ? type + "_wild_upper" : null;
+        int from = upperFrom(type);
+        return from >= 0 && stage >= from ? type + "_upper_" + (stage - from) : null;
+    }
+
+    private float hitHeight(Crop c) {
+        return upperModel(c.type, c.stage) != null ? 1.9f : 0.9f;
+    }
+
+    private ItemStack modelItem(String modelName) {
         ItemStack it = new ItemStack(Material.STICK);
         ItemMeta meta = it.getItemMeta();
-        String name = stage < 0 ? type + "_wild" : type + "_stage_" + stage;
-        meta.setItemModel(new NamespacedKey("cookingdelight", name));
+        meta.setItemModel(new NamespacedKey("cookingdelight", modelName));
         it.setItemMeta(meta);
         return it;
     }
+
+    // ---------- части растения ----------
 
     private List<Entity> parts(Block b) {
         List<Entity> out = new ArrayList<>();
@@ -88,12 +124,31 @@ public final class CropManager {
         return out;
     }
 
-    private void removeParts(Block b) {
-        for (Entity e : parts(b)) e.remove();
+    private List<Entity> upperParts(Block b) {
+        List<Entity> out = new ArrayList<>();
+        for (Entity e : b.getWorld().getNearbyEntities(b.getLocation().add(0.5, 1.5, 0.5), 0.5, 0.5, 0.5)) {
+            if (e.getPersistentDataContainer().has(plugin.keyCropUpper, PersistentDataType.BYTE)) out.add(e);
+        }
+        return out;
     }
 
-    private void spawnParts(Block b, String type, int stage) {
-        ItemStack model = modelItem(type, stage);
+    private void removeParts(Block b) {
+        for (Entity e : parts(b)) e.remove();
+        for (Entity e : upperParts(b)) e.remove();
+    }
+
+    private void spawnUpper(Block b, String modelName) {
+        ItemStack model = modelItem(modelName);
+        b.getWorld().spawn(b.getLocation().add(0.5, 1.5, 0.5), ItemDisplay.class, d -> {
+            d.setItemStack(model);
+            d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+            d.getPersistentDataContainer().set(plugin.keyCropUpper, PersistentDataType.BYTE, (byte) 1);
+        });
+    }
+
+    private void spawnParts(Block b, Crop c) {
+        ItemStack model = modelItem(lowerModel(c.type, c.stage));
+        float height = hitHeight(c);
         b.getWorld().spawn(b.getLocation().add(0.5, 0.5, 0.5), ItemDisplay.class, d -> {
             d.setItemStack(model);
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
@@ -101,14 +156,26 @@ public final class CropManager {
         });
         b.getWorld().spawn(b.getLocation().add(0.5, 0.0, 0.5), Interaction.class, i -> {
             i.setInteractionWidth(0.8f);
-            i.setInteractionHeight(0.9f);
+            i.setInteractionHeight(height);
             i.getPersistentDataContainer().set(plugin.keyCrop, PersistentDataType.BYTE, (byte) 1);
         });
+        String up = upperModel(c.type, c.stage);
+        if (up != null) spawnUpper(b, up);
     }
 
     private void updateModel(Block b, Crop c) {
         for (Entity e : parts(b)) {
-            if (e instanceof ItemDisplay d) d.setItemStack(modelItem(c.type, c.stage));
+            if (e instanceof ItemDisplay d) d.setItemStack(modelItem(lowerModel(c.type, c.stage)));
+            else if (e instanceof Interaction i) i.setInteractionHeight(hitHeight(c));
+        }
+        String up = upperModel(c.type, c.stage);
+        List<Entity> existing = upperParts(b);
+        if (up == null) {
+            for (Entity e : existing) e.remove();
+        } else if (existing.isEmpty()) {
+            spawnUpper(b, up);
+        } else {
+            for (Entity e : existing) if (e instanceof ItemDisplay d) d.setItemStack(modelItem(up));
         }
     }
 
@@ -116,11 +183,14 @@ public final class CropManager {
 
     /** stage = 0 для посаженного семени, -1 для дикого куста. */
     public void plant(Block b, String type, int stage) {
-        Light data = (Light) Material.LIGHT.createBlockData();
-        data.setLevel(0);
-        b.setBlockData(data, false);
-        crops.put(CookingManager.key(b), new Crop(b.getLocation(), type, stage));
-        spawnParts(b, type, stage);
+        if (!isWater(type)) { // наземные культуры занимают блок света, водные остаются в воде
+            Light data = (Light) Material.LIGHT.createBlockData();
+            data.setLevel(0);
+            b.setBlockData(data, false);
+        }
+        Crop c = new Crop(b.getLocation(), type, stage);
+        crops.put(CookingManager.key(b), c);
+        spawnParts(b, c);
     }
 
     private void dropId(String id, int amount, Location at) {
@@ -170,7 +240,7 @@ public final class CropManager {
             dropId(s.getString("fruit"), 1 + ThreadLocalRandom.current().nextInt(2), at);
             if (ThreadLocalRandom.current().nextInt(100) < 30) dropId(s.getString("seeds"), 1, at);
             removeCrop(b);
-            b.getWorld().playSound(at, Sound.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1f, 1f);
+            b.getWorld().playSound(at, Sound.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, 1f, 1f);
             return true;
         }
         if (c.stage < ripeStage(c.type)) return false;
@@ -179,13 +249,13 @@ public final class CropManager {
         if (regrow < 0) { // куст исчезает, остаются семена
             dropId(s.getString("seeds"), s.getInt("harvest-seeds", 1), at);
             removeCrop(b);
-            b.getWorld().playSound(at, Sound.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1f, 1f);
+            b.getWorld().playSound(at, Sound.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, 1f, 1f);
             return true;
         }
         c.stage = Math.min(ripeStage(c.type), regrow);
         c.timer = 0;
         updateModel(b, c);
-        b.getWorld().playSound(at, Sound.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1f, 1f);
+        b.getWorld().playSound(at, Sound.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, 1f, 1f);
         return true;
     }
 
@@ -209,9 +279,12 @@ public final class CropManager {
             if (w == null || !w.isChunkLoaded(c.loc.getBlockX() >> 4, c.loc.getBlockZ() >> 4)) continue;
             Block b = c.loc.getBlock();
             Block below = b.getRelative(BlockFace.DOWN);
-            boolean ok = b.getType() == Material.LIGHT
+            boolean water = isWater(c.type);
+            boolean ok;
+            if (water) ok = b.getType() == Material.WATER && below.getType().isSolid();
+            else ok = b.getType() == Material.LIGHT
                     && (c.stage < 0 ? below.getType().isSolid() : below.getType() == Material.FARMLAND);
-            if (!ok) { // блок убрали или грядку вытоптали
+            if (!ok) { // блок убрали, воду осушили или грядку вытоптали
                 it.remove();
                 dropOnBreak(c, b);
                 removeParts(b);
@@ -220,13 +293,15 @@ public final class CropManager {
             }
             if (parts(b).size() < 2) { // модель или хитбокс пропали, восстанавливаем
                 removeParts(b);
-                spawnParts(b, c.type, c.stage);
+                spawnParts(b, c);
+            } else if (upperModel(c.type, c.stage) != null && upperParts(b).isEmpty()) {
+                spawnUpper(b, upperModel(c.type, c.stage));
             }
             ConfigurationSection s = cfg(c.type);
             if (s == null || c.stage < 0 || c.stage >= ripeStage(c.type)) continue;
             if (b.getLightLevel() < 9) continue;
             double speed = 1.0;
-            if (!(below.getBlockData() instanceof Farmland f) || f.getMoisture() <= 0) speed = 0.5;
+            if (!water && (!(below.getBlockData() instanceof Farmland f) || f.getMoisture() <= 0)) speed = 0.5;
             c.timer += speed;
             if (c.timer >= Math.max(1, s.getInt("stage-seconds", 90))) {
                 c.timer = 0;
@@ -248,12 +323,22 @@ public final class CropManager {
             if (s == null || r.nextDouble() >= s.getDouble("wild-chance", 0)) continue;
             int x = chunk.getX() * 16 + r.nextInt(16);
             int z = chunk.getZ() * 16 + r.nextInt(16);
-            Block ground = w.getBlockAt(x, w.getHighestBlockYAt(x, z), z);
-            Block above = ground.getRelative(BlockFace.UP);
-            if (!ground.getType().isSolid() || !above.getType().isAir()) continue;
-            String biome = above.getBiome().getKey().getKey();
+            Block spot;
+            if (isWater(type)) { // дикий рис стоит в мелкой воде над дном
+                Block top = w.getBlockAt(x, w.getHighestBlockYAt(x, z, HeightMap.WORLD_SURFACE), z);
+                if (top.getType() != Material.WATER || !top.getRelative(BlockFace.DOWN).getType().isSolid()
+                        || !top.getRelative(BlockFace.UP).getType().isAir()) continue;
+                spot = top;
+            } else {
+                Block ground = w.getBlockAt(x, w.getHighestBlockYAt(x, z), z);
+                Block above = ground.getRelative(BlockFace.UP);
+                if (!ground.getType().isSolid() || !above.getType().isAir()) continue;
+                spot = above;
+            }
+            if (at(spot) != null) continue;
+            String biome = spot.getBiome().getKey().getKey();
             if (!s.getStringList("wild-biomes").contains(biome)) continue;
-            plant(above, type, -1);
+            plant(spot, type, -1);
         }
     }
 
