@@ -131,23 +131,29 @@ public final class RecipeBook {
 
                     ConfigurationSection rs = s.getConfigurationSection("result");
                     if (rs == null) throw new IllegalArgumentException("no result");
-                    Material rm = Material.matchMaterial(rs.getString("material", ""));
-                    if (rm == null) throw new IllegalArgumentException("unknown result material");
-                    ItemStack result = new ItemStack(rm, Math.max(1, rs.getInt("amount", 1)));
-                    ItemMeta meta = result.getItemMeta();
-                    if (rs.contains("name")) meta.displayName(mm.deserialize("<!italic>" + rs.getString("name")));
-                    if (rs.contains("model")) {
-                        NamespacedKey k = NamespacedKey.fromString(rs.getString("model", ""));
-                        if (k != null) meta.setItemModel(k);
+                    ItemStack result;
+                    if (rs.contains("item")) { // готовый предмет плагина (например, блюдо целиком)
+                        result = plugin.items().stackOf(rs.getString("item", ""), Math.max(1, rs.getInt("amount", 1)));
+                        if (result == null) throw new IllegalArgumentException("unknown result item");
+                    } else {
+                        Material rm = Material.matchMaterial(rs.getString("material", ""));
+                        if (rm == null) throw new IllegalArgumentException("unknown result material");
+                        result = new ItemStack(rm, Math.max(1, rs.getInt("amount", 1)));
+                        ItemMeta meta = result.getItemMeta();
+                        if (rs.contains("name")) meta.displayName(mm.deserialize("<!italic>" + rs.getString("name")));
+                        if (rs.contains("model")) {
+                            NamespacedKey k = NamespacedKey.fromString(rs.getString("model", ""));
+                            if (k != null) meta.setItemModel(k);
+                        }
+                        if (rs.contains("nutrition") || rs.contains("saturation")) {
+                            FoodComponent food = meta.getFood();
+                            food.setNutrition(rs.getInt("nutrition", food.getNutrition()));
+                            food.setSaturation((float) rs.getDouble("saturation", food.getSaturation()));
+                            meta.setFood(food);
+                        }
+                        meta.getPersistentDataContainer().set(plugin.keyDish, PersistentDataType.STRING, id);
+                        result.setItemMeta(meta);
                     }
-                    if (rs.contains("nutrition") || rs.contains("saturation")) {
-                        FoodComponent food = meta.getFood();
-                        food.setNutrition(rs.getInt("nutrition", food.getNutrition()));
-                        food.setSaturation((float) rs.getDouble("saturation", food.getSaturation()));
-                        meta.setFood(food);
-                    }
-                    meta.getPersistentDataContainer().set(plugin.keyDish, PersistentDataType.STRING, id);
-                    result.setItemMeta(meta);
 
                     List<PotionEffect> effects = new ArrayList<>();
                     for (String e : s.getStringList("effects")) {

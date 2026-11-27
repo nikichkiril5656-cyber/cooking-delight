@@ -57,6 +57,9 @@ public final class Listeners implements Listener {
                 ts.update();
             }
             plugin.manager().addStove(e.getBlockPlaced());
+        } else {
+            String ft = plugin.feasts().typeByItem(id); // блюдо целиком
+            if (ft != null) plugin.feasts().place(e.getBlockPlaced(), ft, snapYaw(e.getPlayer().getLocation().getYaw()));
         }
     }
 
@@ -89,6 +92,13 @@ public final class Listeners implements Listener {
             e.setDropItems(false); // содержимое печи выпадет само
             m.removeStove(b);
             if (!creative) b.getWorld().dropItemNaturally(at, plugin.items().create("stove"));
+        } else if (plugin.feasts().at(b) != null) {
+            e.setDropItems(false);
+            FeastManager.Feast f = plugin.feasts().at(b);
+            boolean full = f.servings >= plugin.feasts().max(f.type);
+            String bi = plugin.feasts().blockItem(f.type);
+            plugin.feasts().remove(b);
+            if (!creative && full && bi != null) b.getWorld().dropItemNaturally(at, plugin.items().create(bi));
         }
     }
 
@@ -103,6 +113,17 @@ public final class Listeners implements Listener {
 
         if (e.getAction() == Action.LEFT_CLICK_BLOCK) {
             // барьер нельзя сломать в выживании, поэтому забираем кастрюлю Shift + ЛКМ
+            FeastManager.Feast fl = plugin.feasts().at(b);
+            if (fl != null && p.isSneaking()) { // барьер не ломается в выживании: забираем блюдо Shift + ЛКМ
+                e.setCancelled(true);
+                boolean full = fl.servings >= plugin.feasts().max(fl.type);
+                String bi = plugin.feasts().blockItem(fl.type);
+                Location fat = b.getLocation().add(0.5, 0.5, 0.5);
+                plugin.feasts().remove(b);
+                if (full && bi != null && p.getGameMode() != GameMode.CREATIVE) b.getWorld().dropItemNaturally(fat, plugin.items().create(bi));
+                b.getWorld().playSound(fat, Sound.BLOCK_WOOD_BREAK, 1f, 1f);
+                return;
+            }
             if (plugin.manager().skillet(b) != null && p.isSneaking()) {
                 e.setCancelled(true);
                 plugin.manager().removeSkillet(b, true);
@@ -140,6 +161,13 @@ public final class Listeners implements Listener {
             if (p.isSneaking() && holdingSomething) return;
             e.setCancelled(true);
             handleSkillet(p, b, sk, held);
+            return;
+        }
+
+        FeastManager.Feast fe = plugin.feasts().at(b);
+        if (fe != null) {
+            e.setCancelled(true);
+            plugin.feasts().serve(p, b, fe, held);
         }
     }
 

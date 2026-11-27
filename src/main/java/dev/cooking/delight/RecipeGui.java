@@ -173,6 +173,7 @@ public final class RecipeGui {
         for (CraftDef c : plugin.crafts()) {
             ItemStack icon = plugin.items().create(c.id());
             if (icon == null) continue;
+            icon.setAmount(c.amount());
             out.add(new Entry(c.id(), nameOf(icon), icon, "Предмет", null, c, null, null, null));
         }
         for (PotRecipe r : plugin.recipes().potRecipes()) {

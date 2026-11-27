@@ -10,17 +10,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class CookingDelight extends JavaPlugin {
-    private static final int RECIPES_VERSION = 5;
+    private static final int RECIPES_VERSION = 6;
 
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;
@@ -33,16 +35,19 @@ public final class CookingDelight extends JavaPlugin {
     public NamespacedKey keyStoveDisplay;
     public NamespacedKey keyCrop;
     public NamespacedKey keyCropUpper;
+    public NamespacedKey keyFeast;
 
     private CustomItems items;
     private RecipeBook recipes;
     private CookingManager manager;
     private CropManager crops;
+    private FeastManager feasts;
 
     public CustomItems items() { return items; }
     public RecipeBook recipes() { return recipes; }
     public CookingManager manager() { return manager; }
     public CropManager crops() { return crops; }
+    public FeastManager feasts() { return feasts; }
 
     @Override
     public void onEnable() {
@@ -71,6 +76,7 @@ public final class CookingDelight extends JavaPlugin {
         keyStoveDisplay = new NamespacedKey(this, "stove_display");
         keyCrop = new NamespacedKey(this, "crop");
         keyCropUpper = new NamespacedKey(this, "crop_upper");
+        keyFeast = new NamespacedKey(this, "feast");
 
         items = new CustomItems(this);
         recipes = new RecipeBook(this);
@@ -79,6 +85,8 @@ public final class CookingDelight extends JavaPlugin {
         manager.load();
         crops = new CropManager(this);
         crops.load();
+        feasts = new FeastManager(this);
+        feasts.load();
 
         getServer().getPluginManager().registerEvents(new Listeners(this), this);
         getServer().getPluginManager().registerEvents(new RecipeGuiListener(this), this);
@@ -89,6 +97,8 @@ public final class CookingDelight extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, manager::save, 6000L, 6000L);
         getServer().getScheduler().runTaskTimer(this, crops::tick, 20L, 20L);
         getServer().getScheduler().runTaskTimer(this, crops::save, 6000L, 6000L);
+        getServer().getScheduler().runTaskTimer(this, feasts::tick, 20L, 20L);
+        getServer().getScheduler().runTaskTimer(this, feasts::save, 6000L, 6000L);
         getServer().getScheduler().runTaskTimer(this, () -> RecipeGui.animate(), 20L, 20L);
     }
 
@@ -96,6 +106,7 @@ public final class CookingDelight extends JavaPlugin {
     public void onDisable() {
         if (manager != null) manager.save();
         if (crops != null) crops.save();
+        if (feasts != null) feasts.save();
     }
 
     private final List<CraftDef> crafts = new ArrayList<>();
@@ -115,11 +126,73 @@ public final class CookingDelight extends JavaPlugin {
             r.setIngredient(e.getKey(), e.getValue());
         }
         Bukkit.addRecipe(r);
-        crafts.add(new CraftDef(id, shape, ingredients));
+        crafts.add(new CraftDef(id, shape, ingredients, 1));
+    }
+
+    private RecipeChoice choice(String token) {
+        if (items.isCustomId(token)) {
+            ItemStack it = items.create(token);
+            return it == null ? null : new RecipeChoice.ExactChoice(it);
+        }
+        Material m = Material.matchMaterial(token);
+        return m == null ? null : mc(m);
+    }
+
+    /** Бесформенный рецепт: id результата, количество и ингредиенты (материал или id предмета плагина). */
+    private void shapeless(String id, int amount, String... tokens) {
+        ItemStack result = items.create(id);
+        if (result == null) return;
+        result.setAmount(amount);
+        List<RecipeChoice> list = new ArrayList<>();
+        for (String t : tokens) {
+            RecipeChoice c = choice(t);
+            if (c == null) {
+                getLogger().warning("Recipe " + id + ": unknown ingredient " + t);
+                return;
+            }
+            list.add(c);
+        }
+        ShapelessRecipe r = new ShapelessRecipe(new NamespacedKey(this, id), result);
+        for (RecipeChoice c : list) r.addIngredient(c);
+        Bukkit.addRecipe(r);
+        // для книги рецептов раскладываем ингредиенты по сетке 3x3
+        Map<Character, RecipeChoice> map = new LinkedHashMap<>();
+        String[] shape = new String[(list.size() + 2) / 3];
+        for (int row = 0; row < shape.length; row++) {
+            StringBuilder sb = new StringBuilder();
+            for (int col = 0; col < 3 && row * 3 + col < list.size(); col++) {
+                char ch = (char) ('a' + row * 3 + col);
+                sb.append(ch);
+                map.put(ch, list.get(row * 3 + col));
+            }
+            shape[row] = sb.toString();
+        }
+        crafts.add(new CraftDef(id, shape, map, amount));
     }
 
     private void registerCrafting() {
         crafts.clear();
+        // заготовки
+        shapeless("wheat_dough", 2, "WHEAT", "WHEAT", "WATER_BUCKET");
+        // лёгкие блюда
+        shapeless("bacon_sandwich", 1, "BREAD", "cooked_bacon", "cabbage_leaf", "tomato");
+        shapeless("barbecue_stick", 1, "STICK", "cooked_chicken_cuts", "onion", "tomato");
+        shapeless("cabbage_rolls", 1, "cabbage_leaf", "cabbage_leaf", "cooked_rice", "cooked_chicken_cuts");
+        shapeless("chicken_sandwich", 1, "BREAD", "cooked_chicken_cuts", "cooked_chicken_cuts", "cabbage_leaf");
+        shapeless("cod_roll", 1, "cooked_cod_slice", "cooked_rice", "DRIED_KELP");
+        shapeless("dumplings", 1, "wheat_dough", "chicken_cuts", "cabbage_leaf", "onion");
+        shapeless("egg_sandwich", 1, "BREAD", "EGG", "cabbage_leaf", "tomato");
+        shapeless("hamburger", 1, "BREAD", "COOKED_BEEF", "cabbage_leaf", "tomato", "onion");
+        shapeless("kelp_roll", 1, "DRIED_KELP", "cooked_rice", "cooked_salmon_slice", "CARROT");
+        shapeless("mutton_wrap", 1, "BREAD", "cooked_mutton_chops", "onion", "cabbage_leaf");
+        // напитки
+        shapeless("apple_cider", 1, "APPLE", "APPLE", "SUGAR", "GLASS_BOTTLE");
+        shapeless("hot_cocoa", 1, "milk_bottle", "COCOA_BEANS", "SUGAR");
+        shapeless("melon_juice", 1, "MELON_SLICE", "MELON_SLICE", "MELON_SLICE", "SUGAR", "GLASS_BOTTLE");
+        shapeless("milk_bottle", 3, "MILK_BUCKET", "GLASS_BOTTLE", "GLASS_BOTTLE", "GLASS_BOTTLE");
+        // корм
+        shapeless("dog_food", 2, "cooked_rice", "ROTTEN_FLESH", "BONE_MEAL", "BEEF");
+        shapeless("horse_feed", 2, "WHEAT", "WHEAT", "CARROT", "APPLE");
         // рецепты как в Farmer's Delight (деревянная ложка заменена палкой)
         craft("pot", new String[]{"BSB", "IWI", "III"},
                 Map.of('B', mc(Material.BRICK), 'S', mc(Material.STICK),

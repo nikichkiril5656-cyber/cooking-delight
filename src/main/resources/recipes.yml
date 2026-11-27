@@ -1,4 +1,4 @@
-version: 5
+version: 6
 
 # Группы ингредиентов (аналог тегов из мода). В рецептах пишутся как #имя.
 # В группах и рецептах можно писать материал (CARROT) или id предмета плагина из config.yml (onion).
@@ -6,7 +6,7 @@ version: 5
 tags:
   onion: [onion]
   leafy_green: [cabbage_leaf, cabbage]
-  pasta: [WHEAT]
+  pasta: [raw_pasta]
   bread: [BREAD]
   milk: [MILK_BUCKET]
   eggs: [EGG]
@@ -97,6 +97,32 @@ pot:
       nutrition: 13
       saturation: 15.6
 
+  # Блюда целиком (ставятся на стол): рецепты придуманы по мотивам мода, меняй как угодно.
+  roast_chicken_feast:
+    ingredients: [CHICKEN, "#onion", CARROT, POTATO, "#leafy_green", BREAD]
+    time: 25
+    result: {item: roast_chicken_block}
+  honey_glazed_ham_feast:
+    ingredients: [PORKCHOP, PORKCHOP, HONEY_BOTTLE, "#onion", CARROT, APPLE]
+    time: 25
+    result: {item: honey_glazed_ham_block}
+  shepherds_pie_feast:
+    ingredients: [MUTTON, MUTTON, "#onion", CARROT, POTATO, wheat_dough]
+    time: 25
+    result: {item: shepherds_pie_block}
+  gleaming_salad_feast:
+    ingredients: ["#leafy_green", "#leafy_green", tomato, "#onion", CARROT, DRIED_KELP]
+    time: 20
+    result: {item: gleaming_salad_block}
+  rice_roll_medley_feast:
+    ingredients: [rice, rice, salmon_slice, cod_slice, DRIED_KELP, "#leafy_green"]
+    time: 25
+    result: {item: rice_roll_medley_block}
+  stuffed_pumpkin_feast:
+    ingredients: [PUMPKIN, rice, CARROT, "#onion", "#leafy_green", "#raw_pork"]
+    time: 25
+    result: {item: stuffed_pumpkin_block}
+
 # Сковорода: положи сырую еду ПКМ, она жарится над огнём. time: секунды.
 skillet:
   BEEF: {result: COOKED_BEEF, time: 8}
@@ -111,6 +137,7 @@ skillet:
   chicken_cuts: {result: cooked_chicken_cuts, time: 5}
   mutton_chops: {result: cooked_mutton_chops, time: 5}
   cod_slice: {result: cooked_cod_slice, time: 4}
+  wheat_dough: {result: BREAD, time: 8}
   salmon_slice: {result: cooked_salmon_slice, time: 4}
 
 # Разделочная доска: положи предмет на доску ПКМ, затем бей ножом (ПКМ).
@@ -125,3 +152,5 @@ cutting:
   SALMON: {result: salmon_slice, amount: 2}
   cabbage: {result: cabbage_leaf, amount: 2}
   rice_panicle: {result: rice, amount: 2}
+  wheat_dough: {result: raw_pasta, amount: 1}
+  kelp_roll: {result: kelp_roll_slice, amount: 3}

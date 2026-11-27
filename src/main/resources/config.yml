@@ -279,6 +279,56 @@ items:
     material: WHEAT
     name: "<white>Корм для лошадей"
     model: "cookingdelight:horse_feed"
+  raw_pasta:
+    material: WHEAT
+    name: "<white>Сырая паста"
+    model: "cookingdelight:raw_pasta"
+  wheat_dough:
+    material: WHEAT
+    name: "<white>Пшеничное тесто"
+    model: "cookingdelight:wheat_dough"
+  roast_chicken_block:
+    material: FLOWER_POT
+    name: "<gold>Жареная курица (целиком)"
+    model: "cookingdelight:roast_chicken_block"
+    lore:
+      - "Ставится на стол."
+      - "ПКМ с миской берёт порцию."
+  honey_glazed_ham_block:
+    material: FLOWER_POT
+    name: "<gold>Ветчина в медовой глазури (целиком)"
+    model: "cookingdelight:honey_glazed_ham_block"
+    lore:
+      - "Ставится на стол."
+      - "ПКМ с миской берёт порцию."
+  shepherds_pie_block:
+    material: FLOWER_POT
+    name: "<gold>Пастуший пирог (целиком)"
+    model: "cookingdelight:shepherds_pie_block"
+    lore:
+      - "Ставится на стол."
+      - "ПКМ с миской берёт порцию."
+  gleaming_salad_block:
+    material: FLOWER_POT
+    name: "<gold>Сияющий салат (целиком)"
+    model: "cookingdelight:gleaming_salad_block"
+    lore:
+      - "Ставится на стол."
+      - "ПКМ с миской берёт порцию."
+  rice_roll_medley_block:
+    material: FLOWER_POT
+    name: "<gold>Ассорти из роллов (целиком)"
+    model: "cookingdelight:rice_roll_medley_block"
+    lore:
+      - "Ставится на стол."
+      - "ПКМ с миской берёт порцию."
+  stuffed_pumpkin_block:
+    material: FLOWER_POT
+    name: "<gold>Фаршированная тыква (целиком)"
+    model: "cookingdelight:stuffed_pumpkin_block"
+    lore:
+      - "Ставится на стол."
+      - "ПКМ с миской берёт порцию."
   flint_knife:
     material: STONE_SWORD
     name: "<gray>Кремнёвый нож"
@@ -376,3 +426,42 @@ crops:
     fruit-max: 2
     wild-chance: 0.05
     wild-biomes: [swamp, mangrove_swamp, jungle, sparse_jungle, bamboo_jungle]
+
+# Блюда на столе: ПКМ посудой (container) берёт порцию. Shift+ЛКМ забирает блюдо, если порции целы.
+feasts:
+  roast_chicken:
+    block-item: roast_chicken_block
+    serving: roast_chicken
+    servings: 4
+    container: BOWL
+    leftovers: true
+  honey_glazed_ham:
+    block-item: honey_glazed_ham_block
+    serving: honey_glazed_ham
+    servings: 4
+    container: BOWL
+    leftovers: true
+  shepherds_pie:
+    block-item: shepherds_pie_block
+    serving: shepherds_pie
+    servings: 4
+    container: BOWL
+    leftovers: true
+  gleaming_salad:
+    block-item: gleaming_salad_block
+    serving: gleaming_salad
+    servings: 4
+    container: BOWL
+    leftovers: true
+  rice_roll_medley:
+    block-item: rice_roll_medley_block
+    serving: salmon_roll
+    servings: 8
+    container: BOWL
+    leftovers: true
+  stuffed_pumpkin:
+    block-item: stuffed_pumpkin_block
+    serving: stuffed_pumpkin
+    servings: 4
+    container: BOWL
+    leftovers: false
