@@ -329,6 +329,234 @@ items:
     lore:
       - "Ставится на стол."
       - "ПКМ с миской берёт порцию."
+  apple_pie:
+    material: WHEAT
+    name: "<gold>Яблочный пирог"
+    model: "cookingdelight:apple_pie"
+    lore:
+      - "Режь ножом на доске на куски."
+  apple_pie_slice:
+    material: BREAD
+    name: "<gold>Кусок яблочного пирога"
+    model: "cookingdelight:apple_pie_slice"
+    nutrition: 5
+    saturation: 6.0
+  chocolate_pie:
+    material: WHEAT
+    name: "<gold>Шоколадный пирог"
+    model: "cookingdelight:chocolate_pie"
+    lore:
+      - "Режь ножом на доске на куски."
+  chocolate_pie_slice:
+    material: BREAD
+    name: "<gold>Кусок шоколадного пирога"
+    model: "cookingdelight:chocolate_pie_slice"
+    nutrition: 5
+    saturation: 6.0
+  sweet_berry_cheesecake:
+    material: WHEAT
+    name: "<gold>Чизкейк со сладкими ягодами"
+    model: "cookingdelight:sweet_berry_cheesecake"
+    lore:
+      - "Режь ножом на доске на куски."
+  sweet_berry_cheesecake_slice:
+    material: BREAD
+    name: "<gold>Кусок чизкейка"
+    model: "cookingdelight:sweet_berry_cheesecake_slice"
+    nutrition: 5
+    saturation: 6.0
+  pumpkin_pie_slice:
+    material: BREAD
+    name: "<gold>Кусок тыквенного пирога"
+    model: "cookingdelight:pumpkin_pie_slice"
+    nutrition: 4
+    saturation: 4.8
+  cake_slice:
+    material: BREAD
+    name: "<white>Кусок торта"
+    model: "cookingdelight:cake_slice"
+    nutrition: 2
+    saturation: 1.2
+  pie_crust:
+    material: WHEAT
+    name: "<white>Корж для пирога"
+    model: "cookingdelight:pie_crust"
+  honey_cookie:
+    material: BREAD
+    name: "<yellow>Медовое печенье"
+    model: "cookingdelight:honey_cookie"
+    nutrition: 2
+    saturation: 2.4
+  sweet_berry_cookie:
+    material: BREAD
+    name: "<yellow>Печенье со сладкими ягодами"
+    model: "cookingdelight:sweet_berry_cookie"
+    nutrition: 2
+    saturation: 2.4
+  melon_popsicle:
+    material: BREAD
+    name: "<green>Дынное эскимо"
+    model: "cookingdelight:melon_popsicle"
+    nutrition: 3
+    saturation: 3.6
+  glow_berry_custard:
+    material: MUSHROOM_STEW
+    name: "<gold>Крем со светящимися ягодами"
+    model: "cookingdelight:glow_berry_custard"
+    nutrition: 7
+    saturation: 8.4
+  fruit_salad:
+    material: MUSHROOM_STEW
+    name: "<green>Фруктовый салат"
+    model: "cookingdelight:fruit_salad"
+    nutrition: 6
+    saturation: 7.2
+  mixed_salad:
+    material: MUSHROOM_STEW
+    name: "<green>Овощной салат"
+    model: "cookingdelight:mixed_salad"
+    nutrition: 6
+    saturation: 7.2
+  nether_salad:
+    material: MUSHROOM_STEW
+    name: "<red>Незер-салат"
+    model: "cookingdelight:nether_salad"
+    nutrition: 5
+    saturation: 6.0
+  bacon_and_eggs:
+    material: MUSHROOM_STEW
+    name: "<yellow>Яичница с беконом"
+    model: "cookingdelight:bacon_and_eggs"
+    nutrition: 10
+    saturation: 12.0
+  baked_cod_stew:
+    material: MUSHROOM_STEW
+    name: "<aqua>Запечённое рагу из трески"
+    model: "cookingdelight:baked_cod_stew"
+    nutrition: 9
+    saturation: 10.8
+  bone_broth:
+    material: MUSHROOM_STEW
+    name: "<white>Костный бульон"
+    model: "cookingdelight:bone_broth"
+    nutrition: 8
+    saturation: 9.6
+  fish_stew:
+    material: MUSHROOM_STEW
+    name: "<aqua>Рыбное рагу"
+    model: "cookingdelight:fish_stew"
+    nutrition: 10
+    saturation: 12.0
+  fried_rice:
+    material: MUSHROOM_STEW
+    name: "<yellow>Жареный рис"
+    model: "cookingdelight:fried_rice"
+    nutrition: 10
+    saturation: 12.0
+  grilled_salmon:
+    material: MUSHROOM_STEW
+    name: "<red>Лосось на гриле"
+    model: "cookingdelight:grilled_salmon"
+    nutrition: 10
+    saturation: 12.0
+  mushroom_rice:
+    material: MUSHROOM_STEW
+    name: "<yellow>Рис с грибами"
+    model: "cookingdelight:mushroom_rice"
+    nutrition: 10
+    saturation: 12.0
+  pasta_with_meatballs:
+    material: MUSHROOM_STEW
+    name: "<gold>Паста с фрикадельками"
+    model: "cookingdelight:pasta_with_meatballs"
+    nutrition: 12
+    saturation: 14.4
+  pasta_with_mutton_chop:
+    material: MUSHROOM_STEW
+    name: "<gold>Паста с бараниной"
+    model: "cookingdelight:pasta_with_mutton_chop"
+    nutrition: 12
+    saturation: 14.4
+  squid_ink_pasta:
+    material: MUSHROOM_STEW
+    name: "<dark_gray>Паста с чернилами кальмара"
+    model: "cookingdelight:squid_ink_pasta"
+    nutrition: 10
+    saturation: 12.0
+  ratatouille:
+    material: MUSHROOM_STEW
+    name: "<red>Рататуй"
+    model: "cookingdelight:ratatouille"
+    nutrition: 10
+    saturation: 12.0
+  roasted_mutton_chops:
+    material: MUSHROOM_STEW
+    name: "<gold>Запечённые бараньи отбивные"
+    model: "cookingdelight:roasted_mutton_chops"
+    nutrition: 12
+    saturation: 14.4
+  steak_and_potatoes:
+    material: MUSHROOM_STEW
+    name: "<gold>Стейк с картофелем"
+    model: "cookingdelight:steak_and_potatoes"
+    nutrition: 12
+    saturation: 14.4
+  fried_egg:
+    material: BREAD
+    name: "<yellow>Жареное яйцо"
+    model: "cookingdelight:fried_egg"
+    nutrition: 4
+    saturation: 4.8
+  beef_patty:
+    material: BREAD
+    name: "<red>Говяжья котлета"
+    model: "cookingdelight:beef_patty"
+    nutrition: 8
+    saturation: 9.6
+  minced_beef:
+    material: BREAD
+    name: "<red>Говяжий фарш"
+    model: "cookingdelight:minced_beef"
+    nutrition: 2
+    saturation: 1.2
+  pumpkin_slice:
+    material: BREAD
+    name: "<gold>Ломтик тыквы"
+    model: "cookingdelight:pumpkin_slice"
+    nutrition: 3
+    saturation: 1.8
+  tomato_sauce:
+    material: WHEAT
+    name: "<red>Томатный соус"
+    model: "cookingdelight:tomato_sauce"
+  rotten_tomato:
+    material: WHEAT
+    name: "<dark_green>Гнилой помидор"
+    model: "cookingdelight:rotten_tomato"
+    lore:
+      - "Пока без особых свойств."
+  straw:
+    material: WHEAT
+    name: "<yellow>Солома"
+    model: "cookingdelight:straw"
+  tree_bark:
+    material: WHEAT
+    name: "<gold>Кора"
+    model: "cookingdelight:tree_bark"
+    lore:
+      - "Пока без особых свойств."
+  rope:
+    material: WHEAT
+    name: "<white>Верёвка"
+    model: "cookingdelight:rope"
+    lore:
+      - "Пока только предмет."
+  half_tatami_mat:
+    material: WHEAT
+    name: "<green>Половина татами"
+    model: "cookingdelight:half_tatami_mat"
+    lore:
+      - "Пока только предмет."
   flint_knife:
     material: STONE_SWORD
     name: "<gray>Кремнёвый нож"
@@ -421,6 +649,8 @@ crops:
     supporting: true
     wild-upper: true
     regrow-stage: 4
+    bonus: straw          # дополнительная добыча при сборе
+    bonus-amount: 1
     stage-seconds: 80
     fruit-min: 1
     fruit-max: 2

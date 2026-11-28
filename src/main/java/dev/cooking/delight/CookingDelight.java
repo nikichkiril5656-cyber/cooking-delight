@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class CookingDelight extends JavaPlugin {
-    private static final int RECIPES_VERSION = 6;
+    private static final int RECIPES_VERSION = 7;
 
     public NamespacedKey keyItem;
     public NamespacedKey keyDish;
@@ -181,8 +181,8 @@ public final class CookingDelight extends JavaPlugin {
         shapeless("chicken_sandwich", 1, "BREAD", "cooked_chicken_cuts", "cooked_chicken_cuts", "cabbage_leaf");
         shapeless("cod_roll", 1, "cooked_cod_slice", "cooked_rice", "DRIED_KELP");
         shapeless("dumplings", 1, "wheat_dough", "chicken_cuts", "cabbage_leaf", "onion");
-        shapeless("egg_sandwich", 1, "BREAD", "EGG", "cabbage_leaf", "tomato");
-        shapeless("hamburger", 1, "BREAD", "COOKED_BEEF", "cabbage_leaf", "tomato", "onion");
+        shapeless("egg_sandwich", 1, "BREAD", "fried_egg", "cabbage_leaf", "tomato");
+        shapeless("hamburger", 1, "BREAD", "beef_patty", "cabbage_leaf", "tomato", "onion");
         shapeless("kelp_roll", 1, "DRIED_KELP", "cooked_rice", "cooked_salmon_slice", "CARROT");
         shapeless("mutton_wrap", 1, "BREAD", "cooked_mutton_chops", "onion", "cabbage_leaf");
         // напитки
@@ -190,6 +190,19 @@ public final class CookingDelight extends JavaPlugin {
         shapeless("hot_cocoa", 1, "milk_bottle", "COCOA_BEANS", "SUGAR");
         shapeless("melon_juice", 1, "MELON_SLICE", "MELON_SLICE", "MELON_SLICE", "SUGAR", "GLASS_BOTTLE");
         shapeless("milk_bottle", 3, "MILK_BUCKET", "GLASS_BOTTLE", "GLASS_BOTTLE", "GLASS_BOTTLE");
+        // выпечка
+        shapeless("pie_crust", 1, "wheat_dough", "wheat_dough", "EGG");
+        shapeless("apple_pie", 1, "pie_crust", "APPLE", "APPLE", "SUGAR");
+        shapeless("chocolate_pie", 1, "pie_crust", "COCOA_BEANS", "COCOA_BEANS", "EGG", "SUGAR");
+        shapeless("sweet_berry_cheesecake", 1, "pie_crust", "SWEET_BERRIES", "SWEET_BERRIES", "MILK_BUCKET", "SUGAR");
+        shapeless("honey_cookie", 4, "wheat_dough", "HONEY_BOTTLE");
+        shapeless("sweet_berry_cookie", 4, "wheat_dough", "SWEET_BERRIES");
+        shapeless("melon_popsicle", 1, "melon_juice", "STICK", "ICE");
+        // десерты и салаты в миске
+        shapeless("glow_berry_custard", 1, "GLOW_BERRIES", "GLOW_BERRIES", "EGG", "MILK_BUCKET", "SUGAR", "BOWL");
+        shapeless("fruit_salad", 1, "APPLE", "SWEET_BERRIES", "MELON_SLICE", "GLOW_BERRIES", "BOWL");
+        shapeless("mixed_salad", 1, "BOWL", "cabbage_leaf", "tomato", "onion", "BEETROOT");
+        shapeless("nether_salad", 1, "BOWL", "WARPED_FUNGUS", "CRIMSON_FUNGUS", "NETHER_WART");
         // корм
         shapeless("dog_food", 2, "cooked_rice", "ROTTEN_FLESH", "BONE_MEAL", "BEEF");
         shapeless("horse_feed", 2, "WHEAT", "WHEAT", "CARROT", "APPLE");

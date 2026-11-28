@@ -1,4 +1,4 @@
-version: 6
+version: 7
 
 # Группы ингредиентов (аналог тегов из мода). В рецептах пишутся как #имя.
 # В группах и рецептах можно писать материал (CARROT) или id предмета плагина из config.yml (onion).
@@ -12,8 +12,8 @@ tags:
   eggs: [EGG]
   raw_pork: [PORKCHOP, bacon]
   raw_chicken: [CHICKEN, chicken_cuts]
-  pumpkin_slice: [PUMPKIN]
-  vegetable: [CARROT, POTATO, BEETROOT, onion, cabbage, tomato, PUMPKIN]
+  pumpkin_slice: [pumpkin_slice]
+  vegetable: [CARROT, POTATO, BEETROOT, onion, cabbage, tomato, PUMPKIN, pumpkin_slice]
 
 # Как показывать большие группы в книге рецептов.
 tag-names:
@@ -123,6 +123,82 @@ pot:
     time: 25
     result: {item: stuffed_pumpkin_block}
 
+  # Блюда из полного набора мода: рецепты придуманы по мотивам оригинала, меняй как угодно.
+  tomato_sauce_pot:
+    ingredients: [tomato, tomato, tomato]
+    container: BOWL
+    time: 10
+    result: {item: tomato_sauce}
+  bacon_and_eggs_pot:
+    ingredients: [cooked_bacon, fried_egg, fried_egg]
+    container: BOWL
+    time: 10
+    result: {item: bacon_and_eggs}
+  baked_cod_stew_pot:
+    ingredients: [COD, POTATO, tomato, EGG]
+    container: BOWL
+    time: 15
+    result: {item: baked_cod_stew}
+  bone_broth_pot:
+    ingredients: [BONE, BONE, "#onion", CARROT]
+    container: BOWL
+    time: 20
+    result: {item: bone_broth}
+  fish_stew_pot:
+    ingredients: [COD, SALMON, "#onion", tomato, "#leafy_green"]
+    container: BOWL
+    time: 15
+    result: {item: fish_stew}
+  fried_rice_pot:
+    ingredients: [cooked_rice, fried_egg, CARROT, "#onion"]
+    container: BOWL
+    time: 12
+    result: {item: fried_rice}
+  grilled_salmon_pot:
+    ingredients: [salmon_slice, salmon_slice, "#leafy_green", "#onion"]
+    container: BOWL
+    time: 12
+    result: {item: grilled_salmon}
+  mushroom_rice_pot:
+    ingredients: [cooked_rice, BROWN_MUSHROOM, RED_MUSHROOM, "#onion"]
+    container: BOWL
+    time: 12
+    result: {item: mushroom_rice}
+  pasta_with_meatballs_pot:
+    ingredients: [raw_pasta, minced_beef, minced_beef, tomato_sauce]
+    container: BOWL
+    time: 15
+    result: {item: pasta_with_meatballs}
+  pasta_with_mutton_chop_pot:
+    ingredients: [raw_pasta, cooked_mutton_chops, tomato_sauce]
+    container: BOWL
+    time: 15
+    result: {item: pasta_with_mutton_chop}
+  squid_ink_pasta_pot:
+    ingredients: [raw_pasta, INK_SAC, "#onion", cod_slice]
+    container: BOWL
+    time: 15
+    result: {item: squid_ink_pasta}
+  ratatouille_pot:
+    ingredients: [tomato, tomato, "#onion", CARROT, "#leafy_green"]
+    container: BOWL
+    time: 15
+    result: {item: ratatouille}
+  roasted_mutton_chops_pot:
+    ingredients: [mutton_chops, mutton_chops, tomato, "#onion"]
+    container: BOWL
+    time: 18
+    result: {item: roasted_mutton_chops}
+  steak_and_potatoes_pot:
+    ingredients: [COOKED_BEEF, BAKED_POTATO, "#leafy_green"]
+    container: BOWL
+    time: 15
+    result: {item: steak_and_potatoes}
+  stuffed_potato_pot:
+    ingredients: [BAKED_POTATO, minced_beef, "#onion", cabbage_leaf]
+    time: 15
+    result: {item: stuffed_potato}
+
 # Сковорода: положи сырую еду ПКМ, она жарится над огнём. time: секунды.
 skillet:
   BEEF: {result: COOKED_BEEF, time: 8}
@@ -138,11 +214,13 @@ skillet:
   mutton_chops: {result: cooked_mutton_chops, time: 5}
   cod_slice: {result: cooked_cod_slice, time: 4}
   wheat_dough: {result: BREAD, time: 8}
+  EGG: {result: fried_egg, time: 4}
+  minced_beef: {result: beef_patty, time: 6}
   salmon_slice: {result: cooked_salmon_slice, time: 4}
 
 # Разделочная доска: положи предмет на доску ПКМ, затем бей ножом (ПКМ).
 cutting:
-  PUMPKIN: {result: PUMPKIN_SEEDS, amount: 4}
+  PUMPKIN: {result: pumpkin_slice, amount: 4}
   MELON: {result: MELON_SLICE, amount: 9}
   SUGAR_CANE: {result: SUGAR, amount: 2}
   PORKCHOP: {result: bacon, amount: 2}
@@ -151,6 +229,12 @@ cutting:
   COD: {result: cod_slice, amount: 2}
   SALMON: {result: salmon_slice, amount: 2}
   cabbage: {result: cabbage_leaf, amount: 2}
+  BEEF: {result: minced_beef, amount: 2}
+  CAKE: {result: cake_slice, amount: 7}
+  PUMPKIN_PIE: {result: pumpkin_pie_slice, amount: 4}
+  apple_pie: {result: apple_pie_slice, amount: 4}
+  chocolate_pie: {result: chocolate_pie_slice, amount: 4}
+  sweet_berry_cheesecake: {result: sweet_berry_cheesecake_slice, amount: 4}
   rice_panicle: {result: rice, amount: 2}
   wheat_dough: {result: raw_pasta, amount: 1}
   kelp_roll: {result: kelp_roll_slice, amount: 3}

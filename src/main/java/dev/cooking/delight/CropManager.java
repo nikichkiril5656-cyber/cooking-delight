@@ -240,22 +240,23 @@ public final class CropManager {
             dropId(s.getString("fruit"), 1 + ThreadLocalRandom.current().nextInt(2), at);
             if (ThreadLocalRandom.current().nextInt(100) < 30) dropId(s.getString("seeds"), 1, at);
             removeCrop(b);
-            b.getWorld().playSound(at, Sound.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1f, 1f);
+            b.getWorld().playSound(at, Sound.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, 1f, 1f);
             return true;
         }
         if (c.stage < ripeStage(c.type)) return false;
         dropId(s.getString("fruit"), fruitCount(s), at);
+        dropId(s.getString("bonus"), s.getInt("bonus-amount", 0), at); // например, солома с риса
         int regrow = s.getInt("regrow-stage", 4);
         if (regrow < 0) { // куст исчезает, остаются семена
             dropId(s.getString("seeds"), s.getInt("harvest-seeds", 1), at);
             removeCrop(b);
-            b.getWorld().playSound(at, Sound.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1f, 1f);
+            b.getWorld().playSound(at, Sound.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, 1f, 1f);
             return true;
         }
         c.stage = Math.min(ripeStage(c.type), regrow);
         c.timer = 0;
         updateModel(b, c);
-        b.getWorld().playSound(at, Sound.BLOCK_SWEET_BERRY_BUSH_PICK_BERRIES, 1f, 1f);
+        b.getWorld().playSound(at, Sound.ITEM_SWEET_BERRIES_PICK_FROM_BUSH, 1f, 1f);
         return true;
     }
 
